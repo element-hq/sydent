@@ -1,7 +1,17 @@
+Sydent is now actively maintained at [element-hq/sydent](https://github.com/element-hq/sydent)
+=================================================================================================
+
+Sydent is an `identity server <https://spec.matrix.org/v1.6/identity-service-api/>`_ for the `Matrix communications protocol <matrix.org>`_
+developed from 2019 through 2025 as part of the Matrix.org Foundation.
+The Matrix.org Foundation is not able to resource maintenance of Sydent
+and it continues to be developed by Element.
+
+See `The future of Synapse and Dendrite blog post <https://matrix.org/blog/2023/11/06/future-of-synapse-dendrite/>`_) for more information.
+
 What is Sydent?
 ===============
 
-Sydent is an `identity server <https://spec.matrix.org/v1.6/identity-service-api/>`_ for the `Matrix communications protocol <matrix.org>`_. It allows Matrix users to prove that they own an email address or phone number, and allows _other_ Matrix users to look them up using that email address or phone number.
+As an identity server, Sydent allows Matrix users to prove that they own an email address or phone number, and allows _other_ Matrix users to look them up using that email address or phone number.
 
 Do I need to run Sydent to run my own homeserver?
 -------------------------------------------------
