@@ -1,3 +1,9 @@
+# This documentation is out of date!
+
+This documentation page is for the versions of Sydent maintained by the _Matrix.org Foundation_ ([github.com/matrix-org/sydent](https://github.com/matrix-org/sydent)), available under the Apache 2.0 licence.
+
+If you are interested in the documentation for a later version of Sydent, please refer to [github.com/element-hq/sydent](https://github.com/element-hq/sydent/tree/main/docs/casefold_migration.md).
+
 # Migrating to case-insensitive email addresses
 
 **Note: the operation described in this documentation is only needed if your server was
