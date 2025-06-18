@@ -91,6 +91,8 @@ jobs:
         with:
          python-version: ${{ matrix.python-version }}
       - run: poetry run trial ${{ matrix.test-dir }}
+        env:
+          RUN_DESPITE_UNSUPPORTED: "Y"
 
   # a job which runs once all the other jobs are complete, thus allowing PRs to
   # be merged.
