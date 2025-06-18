@@ -13,15 +13,17 @@
 # limitations under the License.
 
 import sys
+from os import environ
 
-# Update your remotes folks.
-announcement = """
-Sydent is no longer being developed under the matrix-org organization. See the
-README.rst for more details.
+if environ.get("RUN_DESPITE_UNSUPPORTED") != "Y":
+    # Update your remotes folks.
+    announcement = """
+    Sydent is no longer being developed under the matrix-org organization. See the
+    README.rst for more details.
 
-Please update your git remote to pull from element-hq/sydent:
+    Please update your git remote to pull from element-hq/sydent:
 
-   git remote set-url origin git@github.com:element-hq/sydent.git
-"""
-print(announcement)
-sys.exit(1)
+       git remote set-url origin git@github.com:element-hq/sydent.git
+    """
+    print(announcement)
+    sys.exit(1)
