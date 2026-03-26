@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
+# Copyright 2025 New Vector Ltd.
 # Copyright 2020 The Matrix.org Foundation C.I.C.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+# Please see LICENSE files in the repository root for full details.
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Originally licensed under the Apache License, Version 2.0:
+# <http://www.apache.org/licenses/LICENSE-2.0>.
+
 import re
 from typing import Optional, Tuple
 
@@ -24,7 +19,8 @@ CLIENT_SECRET_REGEX = re.compile(r"^[0-9a-zA-Z\.=_\-]+$")
 # https://regex101.com/r/OyN1lg/2
 hostname_regex = re.compile(
     r"^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$",
-    flags=re.IGNORECASE)
+    flags=re.IGNORECASE,
+)
 
 # it's unclear what the maximum length of an email address is. RFC3696 (as corrected
 # by errata) says:
@@ -36,14 +32,12 @@ hostname_regex = re.compile(
 MAX_EMAIL_ADDRESS_LENGTH = 500
 
 
-def is_valid_client_secret(client_secret):
+def is_valid_client_secret(client_secret: str) -> bool:
     """Validate that a given string matches the client_secret regex defined by the spec
 
     :param client_secret: The client_secret to validate
-    :type client_secret: str
 
     :return: Whether the client_secret is valid
-    :rtype: bool
     """
     return (
         0 < len(client_secret) <= 255
@@ -58,16 +52,14 @@ def is_valid_hostname(string: str) -> bool:
     instance, it doesn't check that the TLD is valid).
 
     :param string: The string to validate
-    :type string: str
 
     :return: Whether the input is a valid hostname
-    :rtype: bool
     """
 
     return hostname_regex.match(string) is not None
 
 
-def parse_server_name(server_name: str) -> Tuple[str, Optional[int]]:
+def parse_server_name(server_name: str) -> Tuple[str, Optional[str]]:
     """Split a server name into host/port parts.
 
     No validation is done on the host part. The port part is validated to be
@@ -114,10 +106,8 @@ def is_valid_matrix_server_name(string: str) -> bool:
     c. A valid hostname
 
     :param string: The string to validate
-    :type string: str
 
     :return: Whether the input is a valid Matrix server name
-    :rtype: bool
     """
 
     try:
@@ -126,6 +116,15 @@ def is_valid_matrix_server_name(string: str) -> bool:
         return False
 
     valid_ipv4_addr = isIPAddress(host)
-    valid_ipv6_literal = host[0] == "[" and host[-1] == "]" and isIPv6Address(host[1:-1])
+    valid_ipv6_literal = (
+        host[0] == "[" and host[-1] == "]" and isIPv6Address(host[1:-1])
+    )
 
     return valid_ipv4_addr or valid_ipv6_literal or is_valid_hostname(host)
+
+
+def normalise_address(address: str, medium: str) -> str:
+    if medium == "email":
+        return address.casefold()
+    else:
+        return address

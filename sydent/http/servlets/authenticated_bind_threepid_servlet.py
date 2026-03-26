@@ -1,43 +1,43 @@
-# -*- coding: utf-8 -*-
-
-# Copyright 2018 New Vector Ltd
+# Copyright 2018-2025 New Vector Ltd.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+# Please see LICENSE files in the repository root for full details.
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-from __future__ import absolute_import
+# Originally licensed under the Apache License, Version 2.0:
+# <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from twisted.web.resource import Resource
+from typing import TYPE_CHECKING
 
-from sydent.http.servlets import get_args, jsonwrap, send_cors
+from twisted.web.server import Request
+
+from sydent.http.servlets import SydentResource, get_args, jsonwrap, send_cors
+from sydent.types import JsonDict
+
+if TYPE_CHECKING:
+    from sydent.sydent import Sydent
 
 
-class AuthenticatedBindThreePidServlet(Resource):
+class AuthenticatedBindThreePidServlet(SydentResource):
     """A servlet which allows a caller to bind any 3pid they want to an mxid
 
     It is assumed that authentication happens out of band
     """
-    def __init__(self, sydent):
-        Resource.__init__(self)
+
+    def __init__(self, sydent: "Sydent") -> None:
+        super().__init__()
         self.sydent = sydent
 
     @jsonwrap
-    def render_POST(self, request):
+    def render_POST(self, request: Request) -> JsonDict:
         send_cors(request)
-        args = get_args(request, ('medium', 'address', 'mxid'))
+        args = get_args(request, ("medium", "address", "mxid"))
 
         return self.sydent.threepidBinder.addBinding(
-            args['medium'], args['address'], args['mxid'],
+            args["medium"],
+            args["address"],
+            args["mxid"],
         )
 
-    def render_OPTIONS(self, request):
+    def render_OPTIONS(self, request: Request) -> bytes:
         send_cors(request)
-        return b''
+        return b""

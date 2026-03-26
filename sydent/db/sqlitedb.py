@@ -1,31 +1,28 @@
-# -*- coding: utf-8 -*-
-
+# Copyright 2018-2025 New Vector Ltd.
 # Copyright 2014 OpenMarket Ltd
-# Copyright 2018 New Vector Ltd
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+# Please see LICENSE files in the repository root for full details.
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Originally licensed under the Apache License, Version 2.0:
+# <http://www.apache.org/licenses/LICENSE-2.0>.
 
-import sqlite3
 import logging
 import os
+import sqlite3
+from typing import TYPE_CHECKING, Tuple
+
+if TYPE_CHECKING:
+    from sydent.sydent import Sydent
 
 logger = logging.getLogger(__name__)
 
+
 class SqliteDatabase:
-    def __init__(self, syd):
+    def __init__(self, syd: "Sydent") -> None:
         self.sydent = syd
 
-        dbFilePath = self.sydent.cfg.get("db", "db.file")
+        dbFilePath = self.sydent.config.database.database_path
         logger.info("Using DB file %s", dbFilePath)
 
         self.db = sqlite3.connect(dbFilePath)
@@ -39,7 +36,7 @@ class SqliteDatabase:
             self._createSchema()
         self._upgradeSchema()
 
-    def _createSchema(self):
+    def _createSchema(self) -> None:
         logger.info("Running schema files...")
         schemaDir = os.path.dirname(__file__)
 
@@ -49,11 +46,11 @@ class SqliteDatabase:
             if not f.endswith(".sql"):
                 continue
             scriptPath = os.path.join(schemaDir, f)
-            fp = open(scriptPath, 'r')
+            fp = open(scriptPath, "r")
             try:
                 logger.info("Importing %s", scriptPath)
                 c.executescript(fp.read())
-            except:
+            except Exception:
                 logger.error("Error importing %s", scriptPath)
                 raise
             fp.close()
@@ -61,7 +58,7 @@ class SqliteDatabase:
         c.close()
         self.db.commit()
 
-    def _upgradeSchema(self):
+    def _upgradeSchema(self) -> None:
         curVer = self._getSchemaVersion()
 
         if curVer < 1:
@@ -74,7 +71,9 @@ class SqliteDatabase:
             logger.info("Migrating schema from v0 to v1")
             cur.execute("DROP INDEX IF EXISTS medium_address")
             cur.execute("DROP INDEX IF EXISTS local_threepid_medium_address")
-            cur.execute("ALTER TABLE local_threepid_associations RENAME TO old_local_threepid_associations");
+            cur.execute(
+                "ALTER TABLE local_threepid_associations RENAME TO old_local_threepid_associations"
+            )
             cur.execute(
                 "CREATE TABLE local_threepid_associations (id integer primary key autoincrement, "
                 "medium varchar(16) not null, "
@@ -100,7 +99,9 @@ class SqliteDatabase:
             cur.execute("DROP INDEX IF EXISTS global_threepid_originServer_originId")
             cur.execute("DROP INDEX IF EXISTS medium_lower_address")
             cur.execute("DROP INDEX IF EXISTS threepid_originServer_originId")
-            cur.execute("ALTER TABLE global_threepid_associations RENAME TO old_global_threepid_associations");
+            cur.execute(
+                "ALTER TABLE global_threepid_associations RENAME TO old_global_threepid_associations"
+            )
             cur.execute(
                 "CREATE TABLE IF NOT EXISTS global_threepid_associations "
                 "(id integer primary key autoincrement, "
@@ -120,7 +121,9 @@ class SqliteDatabase:
                 "SELECT medium, address, mxid, ts, notBefore, notAfter, originServer, originId, sgAssoc "
                 "FROM old_global_threepid_associations"
             )
-            cur.execute("CREATE INDEX global_threepid_medium_address on global_threepid_associations (medium, address)")
+            cur.execute(
+                "CREATE INDEX global_threepid_medium_address on global_threepid_associations (medium, address)"
+            )
             cur.execute(
                 "CREATE INDEX global_threepid_medium_lower_address on "
                 "global_threepid_associations (medium, lower(address))"
@@ -219,10 +222,18 @@ class SqliteDatabase:
 
         if curVer < 8:
             cur = self.db.cursor()
-            cur.execute("CREATE TABLE accounts(user_id TEXT NOT NULL PRIMARY KEY, created_ts BIGINT NOT NULL, consent_version TEXT)")
-            cur.execute("CREATE TABLE tokens(token TEXT NOT NULL PRIMARY KEY, user_id TEXT NOT NULL)")
-            cur.execute("CREATE TABLE accepted_terms_urls(user_id TEXT NOT NULL, url TEXT NOT NULL)")
-            cur.execute("CREATE UNIQUE INDEX accepted_terms_urls_idx ON accepted_terms_urls (user_id, url)")
+            cur.execute(
+                "CREATE TABLE accounts(user_id TEXT NOT NULL PRIMARY KEY, created_ts BIGINT NOT NULL, consent_version TEXT)"
+            )
+            cur.execute(
+                "CREATE TABLE tokens(token TEXT NOT NULL PRIMARY KEY, user_id TEXT NOT NULL)"
+            )
+            cur.execute(
+                "CREATE TABLE accepted_terms_urls(user_id TEXT NOT NULL, url TEXT NOT NULL)"
+            )
+            cur.execute(
+                "CREATE UNIQUE INDEX accepted_terms_urls_idx ON accepted_terms_urls (user_id, url)"
+            )
             self.db.commit()
             logger.info("v7 -> v8 schema migration complete")
             self._setSchemaVersion(8)
@@ -231,7 +242,9 @@ class SqliteDatabase:
             # Fix lookup_hash index for selecting on mxid instead of medium
             cur = self.db.cursor()
             cur.execute("DROP INDEX IF EXISTS lookup_hash_medium")
-            cur.execute("CREATE INDEX global_threepid_lookup_hash ON global_threepid_associations(lookup_hash)")
+            cur.execute(
+                "CREATE INDEX global_threepid_lookup_hash ON global_threepid_associations(lookup_hash)"
+            )
             self.db.commit()
             logger.info("v8 -> v9 schema migration complete")
             self._setSchemaVersion(9)
@@ -244,14 +257,14 @@ class SqliteDatabase:
             logger.info("v9 -> v10 schema migration complete")
             self._setSchemaVersion(10)
 
-    def _getSchemaVersion(self):
+    def _getSchemaVersion(self) -> int:
         cur = self.db.cursor()
-        res = cur.execute("PRAGMA user_version")
-        row = cur.fetchone()
+        cur.execute("PRAGMA user_version")
+        row: Tuple[int] = cur.fetchone()
         return row[0]
 
-    def _setSchemaVersion(self, ver):
+    def _setSchemaVersion(self, ver: int) -> None:
         cur = self.db.cursor()
         # NB. pragma doesn't support variable substitution so we
         # do it in python (as a decimal so we don't risk SQL injection)
-        res = cur.execute("PRAGMA user_version = %d" % (ver,))
+        cur.execute("PRAGMA user_version = %d" % (ver,))

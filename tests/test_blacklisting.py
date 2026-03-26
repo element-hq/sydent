@@ -1,21 +1,14 @@
-#  Copyright 2021 The Matrix.org Foundation C.I.C.
+# Copyright 2025 New Vector Ltd.
+# Copyright 2021 The Matrix.org Foundation C.I.C.
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+# Please see LICENSE files in the repository root for full details.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+# Originally licensed under the Apache License, Version 2.0:
+# <http://www.apache.org/licenses/LICENSE-2.0>.
 
+from unittest.mock import patch
 
-from mock import patch
-from netaddr import IPSet
-from twisted.internet import defer
 from twisted.internet.error import DNSLookupError
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
@@ -23,7 +16,7 @@ from twisted.web.client import Agent
 
 from sydent.http.blacklisting_reactor import BlacklistingReactorWrapper
 from sydent.http.srvresolver import Server
-from tests.utils import make_request, make_sydent
+from tests.utils import AsyncMock, make_request, make_sydent
 
 
 class BlacklistingAgentTest(TestCase):
@@ -52,8 +45,8 @@ class BlacklistingAgentTest(TestCase):
             self.reactor.lookups[domain.decode()] = ip.decode()
             self.reactor.lookups[ip.decode()] = ip.decode()
 
-        self.ip_whitelist = self.sydent.ip_whitelist
-        self.ip_blacklist = self.sydent.ip_blacklist
+        self.ip_whitelist = self.sydent.config.general.ip_whitelist
+        self.ip_blacklist = self.sydent.config.general.ip_blacklist
 
     def test_reactor(self):
         """Apply the blacklisting reactor and ensure it properly blocks
@@ -93,12 +86,25 @@ class BlacklistingAgentTest(TestCase):
                 _bindAddress,
             ) = self.reactor.tcpClients.pop()
 
-    @patch("sydent.http.srvresolver.SrvResolver.resolve_service")
+    @patch(
+        "sydent.http.srvresolver.SrvResolver.resolve_service", new_callable=AsyncMock
+    )
     def test_federation_client_allowed_ip(self, resolver):
         self.sydent.run()
 
+        resolver.return_value = [
+            Server(
+                host=self.allowed_domain,
+                port=443,
+                priority=1,
+                weight=1,
+                expires=100,
+            )
+        ]
+
         request, channel = make_request(
             self.sydent.reactor,
+            self.sydent.clientApiHttpServer.factory,
             "POST",
             "/_matrix/identity/v2/account/register",
             {
@@ -108,20 +114,6 @@ class BlacklistingAgentTest(TestCase):
                 "token_type": "Bearer",
             },
         )
-
-        resolver.return_value = defer.succeed(
-            [
-                Server(
-                    host=self.allowed_domain,
-                    port=443,
-                    priority=1,
-                    weight=1,
-                    expires=100,
-                )
-            ]
-        )
-
-        request.render(self.sydent.servlets.registerServlet)
 
         transport, protocol = self._get_http_request(
             self.allowed_ip.decode("ascii"), 443
@@ -133,7 +125,7 @@ class BlacklistingAgentTest(TestCase):
         self.assertRegex(transport.value(), b"Host: example.com")
 
         # Send it the HTTP response
-        res_json = '{ "sub": "@test:example.com" }'.encode("ascii")
+        res_json = b'{ "sub": "@test:example.com" }'
         protocol.dataReceived(
             b"HTTP/1.1 200 OK\r\n"
             b"Server: Fake\r\n"
@@ -145,12 +137,25 @@ class BlacklistingAgentTest(TestCase):
 
         self.assertEqual(channel.code, 200)
 
-    @patch("sydent.http.srvresolver.SrvResolver.resolve_service")
+    @patch(
+        "sydent.http.srvresolver.SrvResolver.resolve_service", new_callable=AsyncMock
+    )
     def test_federation_client_safe_ip(self, resolver):
         self.sydent.run()
 
+        resolver.return_value = [
+            Server(
+                host=self.safe_domain,
+                port=443,
+                priority=1,
+                weight=1,
+                expires=100,
+            )
+        ]
+
         request, channel = make_request(
             self.sydent.reactor,
+            self.sydent.clientApiHttpServer.factory,
             "POST",
             "/_matrix/identity/v2/account/register",
             {
@@ -161,20 +166,6 @@ class BlacklistingAgentTest(TestCase):
             },
         )
 
-        resolver.return_value = defer.succeed(
-            [
-                Server(
-                    host=self.safe_domain,
-                    port=443,
-                    priority=1,
-                    weight=1,
-                    expires=100,
-                )
-            ]
-        )
-
-        request.render(self.sydent.servlets.registerServlet)
-
         transport, protocol = self._get_http_request(self.safe_ip.decode("ascii"), 443)
 
         self.assertRegex(
@@ -183,7 +174,7 @@ class BlacklistingAgentTest(TestCase):
         self.assertRegex(transport.value(), b"Host: example.com")
 
         # Send it the HTTP response
-        res_json = '{ "sub": "@test:example.com" }'.encode("ascii")
+        res_json = b'{ "sub": "@test:example.com" }'
         protocol.dataReceived(
             b"HTTP/1.1 200 OK\r\n"
             b"Server: Fake\r\n"
@@ -199,8 +190,19 @@ class BlacklistingAgentTest(TestCase):
     def test_federation_client_unsafe_ip(self, resolver):
         self.sydent.run()
 
+        resolver.return_value = [
+            Server(
+                host=self.unsafe_domain,
+                port=443,
+                priority=1,
+                weight=1,
+                expires=100,
+            )
+        ]
+
         request, channel = make_request(
             self.sydent.reactor,
+            self.sydent.clientApiHttpServer.factory,
             "POST",
             "/_matrix/identity/v2/account/register",
             {
@@ -210,20 +212,6 @@ class BlacklistingAgentTest(TestCase):
                 "token_type": "Bearer",
             },
         )
-
-        resolver.return_value = defer.succeed(
-            [
-                Server(
-                    host=self.unsafe_domain,
-                    port=443,
-                    priority=1,
-                    weight=1,
-                    expires=100,
-                )
-            ]
-        )
-
-        request.render(self.sydent.servlets.registerServlet)
 
         self.assertNot(self.reactor.tcpClients)
 

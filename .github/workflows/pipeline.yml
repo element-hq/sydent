@@ -1,0 +1,108 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-newsfile:
+    name: Check PR has a changelog
+    if: ${{ (github.base_ref == 'main' || contains(github.base_ref, 'release-')) && github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: ${{github.event.pull_request.head.sha}}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.11"
+      - run: python -m pip install towncrier
+      - run: "scripts-dev/check_newsfragment.sh ${{ github.event.number }}"
+
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: matrix-org/setup-python-poetry@v1
+        with:
+          python-version: 3.11
+          install-project: false
+
+      - name: Import order (isort)
+        run: poetry run isort --check --diff .
+
+      - name: Code style (black)
+        run: poetry run black --check --diff .
+
+      - name: Semantic checks (ruff)
+        # --quiet suppresses the update check.
+        run: poetry run ruff --quiet .
+
+      - name: Restore/persist mypy's cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            .mypy_cache
+          key: mypy-cache-${{ github.context.sha }}
+          restore-keys: mypy-cache-
+
+      - name: Typechecking (mypy)
+        run: poetry run mypy
+
+  docker:
+    # Sanity check that we can build the x64 image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build image
+        uses: docker/build-push-action@v4
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: .
+          push: false
+
+  run-tests:
+    name: Tests
+    if: ${{ !cancelled() && !failure() }} # Allow previous steps to be skipped, but not fail
+    needs: [check-newsfile, checks]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.11']
+        test-dir: ['tests', 'matrix_is_tester']
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: matrix-org/setup-python-poetry@v1
+        with:
+         python-version: ${{ matrix.python-version }}
+      - run: poetry run trial ${{ matrix.test-dir }}
+
+  # a job which runs once all the other jobs are complete, thus allowing PRs to
+  # be merged.
+  tests-done:
+    if: ${{ always() }}
+    needs:
+      - check-newsfile
+      - checks
+      - run-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: matrix-org/done-action@v2
+        with:
+          needs: ${{ toJSON(needs) }}
+          # The newsfile lint may be skipped on non PR builds or on dependabot builds
+          skippable:
+            check-newsfile
+

@@ -1,12 +1,13 @@
-from __future__ import absolute_import
-
 import logging
+from typing import TYPE_CHECKING, Dict
 
 from sydent.db.valsession import ThreePidValSessionStore
+
 from sydent.validators import (
+    THREEPID_SESSION_VALIDATION_TIMEOUT_MS,
     IncorrectClientSecretException,
-    InvalidSessionIdException,
     IncorrectSessionTokenException,
+    InvalidSessionIdException,
     SessionExpiredException,
     ValidationSession,
     NextLinkValidationException,
@@ -16,28 +17,26 @@ from sqlite3 import IntegrityError
 from six.moves.urllib.parse import urlparse
 
 
+if TYPE_CHECKING:
+    from sydent.sydent import Sydent
+
 logger = logging.getLogger(__name__)
 
 
-def validateSessionWithToken(sydent, sid, clientSecret, token, next_link=None):
+def validateSessionWithToken(sydent: "Sydent", sid: int, clientSecret: str, token: str, next_link=None) -> Dict[str, bool]:
     """
     Attempt to validate a session, identified by the sid, using
     the token from out-of-band. The client secret is given to
     prevent attempts to guess the token for a sid.
 
     :param sid: The ID of the session to validate.
-    :type sid: unicode
     :param clientSecret: The client secret to validate.
-    :type clientSecret: unicode
     :param token: The token to validate.
-    :type token: unicode
     :param next_link: The link to redirect the client to after validation, if provided
     :type next_link: unicode or None
 
-
     :return: A dict with a "success" key which is True if the session
         was successfully validated, False otherwise.
-    :rtype: dict[str, bool]
 
     :raise IncorrectClientSecretException: The provided client_secret is incorrect.
     :raise SessionExpiredException: The session has expired.
@@ -46,16 +45,18 @@ def validateSessionWithToken(sydent, sid, clientSecret, token, next_link=None):
     :raise IncorrectSessionTokenException: The provided token is incorrect
     """
     valSessionStore = ThreePidValSessionStore(sydent)
-    s = valSessionStore.getTokenSessionById(sid)
-    if not s:
+    result = valSessionStore.getTokenSessionById(sid)
+    if not result:
         logger.info("Session ID %s not found", sid)
         raise InvalidSessionIdException()
 
-    if not clientSecret == s.clientSecret:
+    session, token_info = result
+
+    if not clientSecret == session.client_secret:
         logger.info("Incorrect client secret", sid)
         raise IncorrectClientSecretException()
 
-    if s.mtime + ValidationSession.THREEPID_SESSION_VALIDATION_TIMEOUT_MS < time_msec():
+    if session.mtime + THREEPID_SESSION_VALIDATION_TIMEOUT_MS < time_msec():
         logger.info("Session expired")
         raise SessionExpiredException()
 
@@ -81,12 +82,12 @@ def validateSessionWithToken(sydent, sid, clientSecret, token, next_link=None):
         raise NextLinkValidationException()
 
     # TODO once we can validate the token oob
-    #if tokenObj.validated and clientSecret == tokenObj.clientSecret:
+    # if tokenObj.validated and clientSecret == tokenObj.clientSecret:
     #    return True
 
-    if s.token == token:
-        logger.info("Setting session %s as validated", s.id)
-        valSessionStore.setValidated(s.id, True)
+    if token_info.token == token:
+        logger.info("Setting session %s as validated", session.id)
+        valSessionStore.setValidated(session.id, True)
 
         # If a next_link parameter was provided, store it alongside the token in the
         # database

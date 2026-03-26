@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from mock import Mock
-from sydent.http.httpclient import FederationHttpClient
-from sydent.db.invite_tokens import JoinTokenStore
-from tests.utils import make_sydent
-from twisted.web.client import Response
+from unittest.mock import Mock, patch
+
 from twisted.trial import unittest
+from twisted.web.client import Response
+
+from sydent.db.invite_tokens import JoinTokenStore
+from sydent.http.httpclient import FederationHttpClient
 from sydent.http.servlets.store_invite_servlet import StoreInviteServlet
+from tests.utils import make_request, make_sydent
 
 
 class ThreepidInvitesTestCase(unittest.TestCase):
@@ -35,8 +37,8 @@ class ThreepidInvitesTestCase(unittest.TestCase):
         address = "john@example.com"
 
         # Mock post_json_get_nothing so the /onBind call doesn't fail.
-        def post_json_get_nothing(uri, post_json, opts):
-            return Response((b'HTTP', 1, 1), 200, b'OK', None, None)
+        async def post_json_get_nothing(uri, post_json, opts):
+            return Response((b"HTTP", 1, 1), 200, b"OK", None, None)
 
         FederationHttpClient.post_json_get_nothing = Mock(
             side_effect=post_json_get_nothing,
@@ -45,7 +47,10 @@ class ThreepidInvitesTestCase(unittest.TestCase):
         # Manually insert an invite token, we'll check later that it's been deleted.
         join_token_store = JoinTokenStore(self.sydent)
         join_token_store.storeToken(
-            medium, address, "!someroom:example.com", "@jane:example.com",
+            medium,
+            address,
+            "!someroom:example.com",
+            "@jane:example.com",
             "sometoken",
         )
 
@@ -69,7 +74,10 @@ class ThreepidInvitesTestCase(unittest.TestCase):
         res = cur.execute(
             "SELECT medium, address, room_id, sender, token FROM invite_tokens"
             " WHERE medium = ? AND address = ?",
-            (medium, address,)
+            (
+                medium,
+                address,
+            ),
         )
         rows = res.fetchall()
 
@@ -90,7 +98,9 @@ class ThreepidInvitesTestCase(unittest.TestCase):
         # Addresses that are shorter than the configured reveal length are not redacted if
         # always_obfuscate is false
         short_email_address = "1@1.com"
-        redacted_address = store_invite_servlet.redact_email_address(short_email_address)
+        redacted_address = store_invite_servlet.redact_email_address(
+            short_email_address
+        )
         self.assertEqual(redacted_address, u"1@1.com")
 
         # Set always_obfuscate to true
@@ -150,18 +160,56 @@ class ThreepidInvitesFallbackConfigTestCase(unittest.TestCase):
 
         self.assertEqual(redacted_address, u"123456789…@1234…")
 
+    def test_third_party_invite_keyword_block_works(self):
+        invite_config = {
+            "medium": "email",
+            "address": "foo@example.com",
+            "room_id": "!bar",
+            "sender": "@foo:example.com",
+            "room_name": "This is an EVIL room name.",
+        }
+        request, channel = make_request(
+            self.sydent.reactor,
+            self.sydent.clientApiHttpServer.factory,
+            "POST",
+            "/_matrix/identity/api/v1/store-invite",
+            invite_config,
+        )
+        self.assertEqual(channel.code, 403)
+
+    def test_third_party_invite_keyword_blocklist_exempts_web_client_location_url(
+        self,
+    ):
+        invite_config = {
+            "medium": "email",
+            "address": "foo@example.com",
+            "room_id": "!bar",
+            "sender": "@foo:example.com",
+            "room_name": "This is a fine room name.",
+            "org.matrix.web_client_location": "https://example.com",
+        }
+
+        # don't actually send the email
+        with patch("sydent.util.emailutils.smtplib") as smtplib:
+            request, channel = make_request(
+                self.sydent.reactor,
+                self.sydent.clientApiHttpServer.factory,
+                "POST",
+                "/_matrix/identity/api/v1/store-invite",
+                invite_config,
+            )
+        self.assertEqual(channel.code, 200)
+        smtp = smtplib.SMTP.return_value
+        # but make sure we did try to send it
+        smtp.sendmail.assert_called_once()
+
 
 class ThreepidInvitesNoDeleteTestCase(unittest.TestCase):
-    """Test that invite tokens are not deleted when that is disabled.
-    """
+    """Test that invite tokens are not deleted when that is disabled."""
 
     def setUp(self):
         # Create a new sydent
-        config = {
-            "general": {
-                "delete_tokens_on_bind": "false"
-            }
-        }
+        config = {"general": {"delete_tokens_on_bind": "false"}}
         self.sydent = make_sydent(test_config=config)
 
     def test_no_delete_on_bind(self):
@@ -172,8 +220,8 @@ class ThreepidInvitesNoDeleteTestCase(unittest.TestCase):
         address = "john@example.com"
 
         # Mock post_json_get_nothing so the /onBind call doesn't fail.
-        def post_json_get_nothing(uri, post_json, opts):
-            return Response((b'HTTP', 1, 1), 200, b'OK', None, None)
+        async def post_json_get_nothing(uri, post_json, opts):
+            return Response((b"HTTP", 1, 1), 200, b"OK", None, None)
 
         FederationHttpClient.post_json_get_nothing = Mock(
             side_effect=post_json_get_nothing,
@@ -182,7 +230,10 @@ class ThreepidInvitesNoDeleteTestCase(unittest.TestCase):
         # Manually insert an invite token, we'll check later that it's been deleted.
         join_token_store = JoinTokenStore(self.sydent)
         join_token_store.storeToken(
-            medium, address, "!someroom:example.com", "@jane:example.com",
+            medium,
+            address,
+            "!someroom:example.com",
+            "@jane:example.com",
             "sometoken",
         )
 
@@ -206,7 +257,10 @@ class ThreepidInvitesNoDeleteTestCase(unittest.TestCase):
         res = cur.execute(
             "SELECT medium, address, room_id, sender, token FROM invite_tokens"
             " WHERE medium = ? AND address = ?",
-            (medium, address,)
+            (
+                medium,
+                address,
+            ),
         )
         rows = res.fetchall()
 

@@ -1,11 +1,14 @@
 import json
-from io import BytesIO
 import logging
 import os
-from typing import Dict
+from io import BytesIO
+from typing import Dict, Optional
+from unittest.mock import MagicMock
+
 import attr
-from six import text_type
-from zope.interface import implementer
+import twisted.logger
+from OpenSSL import crypto
+from twisted.internet import address
 from twisted.internet._resolver import SimpleResolverComplexifier
 from twisted.internet.defer import fail, succeed
 from twisted.internet.error import DNSLookupError
@@ -14,17 +17,14 @@ from twisted.internet.interfaces import (
     IReactorPluggableNameResolver,
     IResolverSimple,
 )
-
-from twisted.internet import address
-import twisted.logger
+from twisted.test.proto_helpers import MemoryReactorClock
+from twisted.web.http import unquote
 from twisted.web.http_headers import Headers
 from twisted.web.server import Request, Site
-from twisted.web.http import unquote
-from twisted.test.proto_helpers import MemoryReactorClock
-from OpenSSL import crypto
+from zope.interface import implementer
 
-from sydent.sydent import Sydent, parse_config_dict
-
+from sydent.config import SydentConfig
+from sydent.sydent import Sydent
 
 # Expires on Jan 11 2030 at 17:53:40 GMT
 FAKE_SERVER_CERT_PEM = """
@@ -53,27 +53,49 @@ tWVEpHfT+G7AjA8=
 """
 
 
-def make_sydent(test_config={}):
+def make_sydent(test_config: Optional[dict] = None) -> Sydent:
     """Create a new sydent
 
     Args:
-        test_config (dict): any configuration variables for overriding the default sydent
+        test_config: Configuration variables for overriding the default sydent
             config
     """
+    if test_config is None:
+        test_config = {}
+
     # Use an in-memory SQLite database. Note that the database isn't cleaned up between
     # tests, so by default the same database will be used for each test if changed to be
     # a file on disk.
-    if "db" not in test_config:
-        test_config["db"] = {"db.file": ":memory:"}
-    else:
-        test_config["db"].setdefault("db.file", ":memory:")
+    test_config.setdefault("db", {}).setdefault("db.file", ":memory:")
+
+    # Specify a server name to avoid warnings.
+    general_config = test_config.setdefault("general", {})
+    general_config.setdefault("server.name", ":test:")
+    # Specify the default templates.
+    general_config.setdefault(
+        "templates.path",
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "res"),
+    )
+
+    # Specify a signing key.
+    test_config.setdefault("crypto", {}).setdefault(
+        "ed25519.signingkey", "ed25519 0 FJi1Rnpj3/otydngacrwddFvwz/dTDsBv62uZDN2fZM"
+    )
 
     reactor = ResolvingMemoryReactorClock()
-    return Sydent(reactor=reactor, cfg=parse_config_dict(test_config), use_tls_for_federation=False)
+
+    sydent_config = SydentConfig()
+    sydent_config.parse_config_dict(test_config)
+
+    return Sydent(
+        reactor=reactor,
+        sydent_config=sydent_config,
+        use_tls_for_federation=False,
+    )
 
 
 @attr.s
-class FakeChannel(object):
+class FakeChannel:
     """
     A fake Twisted Web Channel (the part that interfaces with the
     wire). Mostly copied from Synapse's tests framework.
@@ -141,7 +163,7 @@ class FakeChannel(object):
         self.result["done"] = True
 
     def getPeer(self):
-        # We give an address so that getClientIP returns a non null entry,
+        # We give an address so that getClientAddress().host returns a non null entry,
         # causing us to record the MAU
         return address.IPv4Address("TCP", "127.0.0.1", 3423)
 
@@ -165,6 +187,7 @@ class FakeSite:
 
 def make_request(
     reactor,
+    site,
     method,
     path,
     content=b"",
@@ -179,6 +202,7 @@ def make_request(
 
     Args:
         reactor (IReactor): The Twisted reactor to use when performing the request.
+        site (
         method (bytes or unicode): The HTTP request method ("verb").
         path (bytes or unicode): The HTTP path, suitably URL encoded (e.g.
         escaped UTF-8 & spaces and such).
@@ -211,14 +235,12 @@ def make_request(
 
     if isinstance(content, dict):
         content = json.dumps(content)
-    if isinstance(content, text_type):
+    if isinstance(content, str):
         content = content.encode("utf8")
 
-    site = FakeSite()
     channel = FakeChannel(site, reactor)
 
     req = request(channel)
-    req.process = lambda: b""
     req.content = BytesIO(content)
     req.postpath = list(map(unquote, path[1:].split(b"/")))
 
@@ -296,3 +318,8 @@ class ResolvingMemoryReactorClock(MemoryReactorClock):
 
     def installNameResolver(self, resolver: IHostnameResolver) -> IHostnameResolver:
         raise NotImplementedError()
+
+
+class AsyncMock(MagicMock):
+    async def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)

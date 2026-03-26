@@ -1,22 +1,15 @@
-# -*- coding: utf-8 -*-
-
+# Copyright 2025 New Vector Ltd.
 # Copyright 2019 The Matrix.org Foundation C.I.C.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+# Please see LICENSE files in the repository root for full details.
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Originally licensed under the Apache License, Version 2.0:
+# <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import os
-import tempfile
 import shutil
+import tempfile
 import time
 from subprocess import Popen
 
@@ -43,48 +36,62 @@ ip.whitelist = 127.0.0.1
 [email]
 email.tlsmode = 0
 email.invite.subject = %(sender_display_name)s has invited you to chat
+email.invite.subject_space = %(sender_display_name)s has invited you to a space
 email.smtphost = localhost
 email.from = Sydent Validation <noreply@localhost>
 email.smtpport = 9925
 email.subject = Your Validation Token
+email.ratelimit_sender.burst = 100000
+email.ratelimit_sender.rate_hz = 100000
 """
 
-class MatrixIsTestLauncher(object):
+
+class MatrixIsTestLauncher:
     def __init__(self, with_terms):
         self.with_terms = with_terms
 
     def launch(self):
-        sydent_path = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), '..',
-        ))
-        testsubject_path = os.path.join(
-            sydent_path, 'matrix_is_test',
+        sydent_path = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                "..",
+            )
         )
-        terms_path = os.path.join(testsubject_path, 'terms.yaml') if self.with_terms else ''
-        info_path = os.path.join(testsubject_path, 'info.yaml')
+        testsubject_path = os.path.join(
+            sydent_path,
+            "matrix_is_test",
+        )
+        terms_path = (
+            os.path.join(testsubject_path, "terms.yaml") if self.with_terms else ""
+        )
+        info_path = os.path.join(testsubject_path, "info.yaml")
         port = 8099 if self.with_terms else 8098
 
-        self.tmpdir = tempfile.mkdtemp(prefix='sydenttest')
+        self.tmpdir = tempfile.mkdtemp(prefix="sydenttest")
 
-        with open(os.path.join(self.tmpdir, 'sydent.conf'), 'w') as cfgfp:
-            cfgfp.write(CFG_TEMPLATE.format(
-                testsubject_path=testsubject_path,
-                terms_path=terms_path,
-                info_path=info_path,
-                port=port,
-            ))
+        with open(os.path.join(self.tmpdir, "sydent.conf"), "w") as cfgfp:
+            cfgfp.write(
+                CFG_TEMPLATE.format(
+                    testsubject_path=testsubject_path,
+                    terms_path=terms_path,
+                    info_path=info_path,
+                    port=port,
+                )
+            )
 
         newEnv = os.environ.copy()
-        newEnv.update({
-            'PYTHONPATH': sydent_path,
-        })
+        newEnv.update(
+            {
+                "PYTHONPATH": sydent_path,
+            }
+        )
 
-        stderr_fp = open(os.path.join(testsubject_path, 'sydent.stderr'), 'w')
+        stderr_fp = open(os.path.join(testsubject_path, "sydent.stderr"), "w")
 
-        pybin = os.getenv('SYDENT_PYTHON', 'python')
+        pybin = os.getenv("SYDENT_PYTHON", "python")
 
         self.process = Popen(
-            args=[pybin, '-m', 'sydent.sydent'],
+            args=[pybin, "-m", "sydent.sydent"],
             cwd=self.tmpdir,
             env=newEnv,
             stderr=stderr_fp,
@@ -92,7 +99,7 @@ class MatrixIsTestLauncher(object):
         # XXX: wait for startup in a sensible way
         time.sleep(2)
 
-        self._baseUrl = 'http://localhost:%d' % (port,)
+        self._baseUrl = "http://localhost:%d" % (port,)
 
     def tearDown(self):
         print("Stopping sydent...")

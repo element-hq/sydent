@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
-
+# Copyright 2025 New Vector Ltd.
 # Copyright 2020 The Matrix.org Foundation C.I.C.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+# Please see LICENSE files in the repository root for full details.
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Originally licensed under the Apache License, Version 2.0:
+# <http://www.apache.org/licenses/LICENSE-2.0>.
 
 from twisted.trial import unittest
 
@@ -33,12 +26,11 @@ class AuthTestCase(unittest.TestCase):
         cur.execute(
             "INSERT INTO accounts (user_id, created_ts, consent_version)"
             "VALUES (?, ?, ?)",
-            ("@bob:localhost", 101010101, "asd")
+            ("@bob:localhost", 101010101, "asd"),
         )
         cur.execute(
-            "INSERT INTO tokens (user_id, token)"
-            "VALUES (?, ?)",
-            ("@bob:localhost", self.test_token)
+            "INSERT INTO tokens (user_id, token)" "VALUES (?, ?)",
+            ("@bob:localhost", self.test_token),
         )
 
         self.sydent.db.commit()
@@ -48,7 +40,10 @@ class AuthTestCase(unittest.TestCase):
         self.sydent.run()
 
         request, _ = make_request(
-            self.sydent.reactor, "GET", "/_matrix/identity/v2/hash_details"
+            self.sydent.reactor,
+            self.sydent.clientApiHttpServer.factory,
+            "GET",
+            "/_matrix/identity/v2/hash_details",
         )
         request.requestHeaders.addRawHeader(
             b"Authorization", b"Bearer " + self.test_token.encode("ascii")
@@ -63,8 +58,10 @@ class AuthTestCase(unittest.TestCase):
         self.sydent.run()
 
         request, _ = make_request(
-            self.sydent.reactor, "GET",
-            "/_matrix/identity/v2/hash_details?access_token=" + self.test_token
+            self.sydent.reactor,
+            self.sydent.clientApiHttpServer.factory,
+            "GET",
+            "/_matrix/identity/v2/hash_details?access_token=" + self.test_token,
         )
 
         token = tokenFromRequest(request)

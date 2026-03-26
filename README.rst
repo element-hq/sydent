@@ -1,3 +1,24 @@
+What is Sydent?
+===============
+
+Sydent is an `identity server <https://spec.matrix.org/v1.6/identity-service-api/>`_ for the `Matrix communications protocol <matrix.org>`_. It allows Matrix users to prove that they own an email address or phone number, and allows _other_ Matrix users to look them up using that email address or phone number.
+
+Do I need to run Sydent to run my own homeserver?
+-------------------------------------------------
+
+Short answer: **no**.
+
+Medium answer: **probably not**. Most homeservers and clients use the Sydent
+instance run by `matrix.org`, or use no identity server whatsoever.
+
+Longer answer: if you want to allow user lookup via emails and phone numbers in
+a private federation of multiple homeservers, Sydent _might_ be useful for you.
+If you want your homeserver to be able to verify phone numbers via SMS and
+you have an API token for the `OpenMarket HTTP SMS API
+<https://www.openmarket.com/docs/Content/apis/v4http/overview.htm>`_, then
+Sydent might be useful for you.
+
+
 Installation
 ============
 
@@ -7,45 +28,28 @@ Installing the system dependencies
 To install Sydent's dependencies on a Debian-based system, run::
 
     sudo apt-get install build-essential python3-dev libffi-dev \
-                         sqlite3 libssl-dev python-virtualenv libxslt1-dev
-
-Creating the virtualenv
------------------------
-
-To create the virtual environment in which Sydent will run::
-
-    virtualenv -p python3 ~/.sydent
-    source ~/.sydent/bin/activate
-    pip install --upgrade pip
-    pip install --upgrade setuptools
-
-
-Installing the latest Sydent release from PyPI
-----------------------------------------------
-
-Sydent and its dependencies can be installed using ``pip`` by running::
-
-    pip install matrix-sydent
+                         sqlite3 libssl-dev python3-virtualenv libxslt1-dev
 
 Installing from source
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
-Alternatively, Sydent can be installed using ``pip`` from a local git checkout::
+First install `poetry`. See `poetry's documentation <https://python-poetry.org/docs/#installation>`_ for details; we recommend installing via `pipx`. Once that's done::
 
-    git clone https://github.com/matrix-org/sydent.git
+    git clone https://github.com/element-hq/sydent.git
     cd sydent
-    pip install -e .
+    poetry install --no-dev
+    # For development, pull in extra tools with
+    # poetry install
 
+To start Sydent::
+
+    poetry run sydent
 
 Running Sydent
 ==============
 
-With the virtualenv activated, you can run Sydent using::
-
-    python -m sydent.sydent
-
-This will create a configuration file in ``sydent.conf`` with some defaults. If a setting is
-defined in both the ``[DEFAULT]`` section and another section in the configuration file,
+When Sydent is first run, it will create a configuration file in ``sydent.conf`` with some defaults. 
+If a setting is defined in both the ``[DEFAULT]`` section and another section in the configuration file,
 then the value in the other section is used.
 
 You'll most likely want to change the server name (``server.name``) and specify an email server
@@ -57,6 +61,20 @@ the configuration settings ``clientapi.http.bind_address`` and ``clientapi.http.
 Sydent uses SQLite as its database backend. By default, it will create the database as ``sydent.db``
 in its working directory. The name can be overridden by modifying the ``db.file`` configuration option.
 Sydent is known to be working with SQLite version 3.16.2 and later.
+
+Listening for HTTPS connections
+-------------------------------
+
+Most homeservers and clients will expect identity servers to be reachable using HTTPS.
+
+Sydent does not currently support listening for HTTPS connection by itself. Instead, it
+is recommended to use a reverse proxy to proxy requests from homeservers and clients to
+Sydent. It is then possible to have this reverse proxy serve Sydent's API over HTTPS.
+
+When using a reverse proxy, it is recommended to limit the requests proxied to Sydent to
+ones which paths start with ``/_matrix/identity`` for security reasons.
+
+An exception to this is Sydent's internal replication API, see `<docs/replication.md>`_.
 
 SMS originators
 ---------------
@@ -80,13 +98,14 @@ Docker
 A Dockerfile is provided for sydent. To use it, run ``docker build -t sydent .`` in a sydent checkout.
 To run it, use ``docker run --env=SYDENT_SERVER_NAME=my-sydent-server -p 8090:8090 sydent``.
 
-Caution: All data will be lost when the container is terminated!
+Alternatively, to run with the prebuilt Docker image from Docker Hub, use
+``docker run --env=SYDENT_SERVER_NAME=my-sydent-server -p 8090:8090 matrixdotorg/sydent``.
 
 Persistent data
 ---------------
 
-By default, all data is stored in ``/data``.
-The best method is to put the data in a Docker volume.
+By default, all data is stored in ``/data``. To persist this to disk, bind `/data` to a
+Docker volume.
 
 .. code-block:: shell
 
@@ -118,29 +137,6 @@ Environment variables
 +--------------------+-----------------+-----------------------+
 | SYDENT_DB_PATH     | ``sydent.db``   | ``/data/sydent.db``   |
 +--------------------+-----------------+-----------------------+
-
-Testing
-=======
-
-Sydent uses matrix-is-tester (https://github.com/matrix-org/matrix-is-tester/) to provide
-black-box testing of compliance with the `Matrix Identity Service API <https://matrix.org/docs/spec/identity_service/latest>`_.
-This can be run as follows::
-
-    pip install git+https://github.com/matrix-org/matrix-is-tester.git
-    trial matrix_is_tester
-
-The ``SYDENT_PYTHON`` enviroment variable can be set to launch Sydent with a specific python binary::
-
-    SYDENT_PYTHON=/path/to/python trial matrix_is_tester
-
-The ``matrix_is_test`` directory contains Sydent's launcher for ``matrix_is_tester``: this means
-that Sydent's directory needs to be on the Python path (e.g. ``PYTHONPATH=$PYTHONPATH:/path/to/sydent``).
-
-Sydent also has some unit tests to ensure some of its features that aren't part of the Matrix
-specification (e.g. replication) keep on working. To run these tests, run the following with Sydent's
-virtualenv activated from the root of the Sydent repository::
-
-     trial tests
 
 
 Internal bind and unbind API
@@ -186,3 +182,26 @@ Replication
 
 It is possible to configure a mesh of Sydent instances which replicate identity bindings
 between each other. See `<docs/replication.md>`_.
+
+Discussion
+==========
+
+Matrix room: `#sydent:matrix.org <https://matrix.to/#/#sydent:matrix.org>`_.
+
+
+Copyright and Licensing
+=======================
+
+| Copyright 2014-2017 OpenMarket Ltd
+| Copyright 2017 Vector Creations Ltd
+| Copyright 2019-2022 The Matrix.org Foundation C.I.C.
+| Copyright 2018-2025 New Vector Ltd
+|
+
+This software is dual-licensed by New Vector Ltd (Element). It can be used either:
+
+(1) for free under the terms of the GNU Affero General Public License (as published by the Free Software Foundation, version 3 of the License; OR
+
+(2) under the terms of a paid-for Element Commercial License agreement between you and Element (the terms of which may vary depending on what you and Element have agreed to).
+
+Unless required by applicable law or agreed to in writing, software distributed under the Licenses is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the Licenses for the specific language governing permissions and limitations under the Licenses.

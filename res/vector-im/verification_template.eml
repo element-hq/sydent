@@ -43,7 +43,7 @@ lets you run your own server, and provides users and teams with the most advance
 crypto ratchet technology available today for a decentralized secure Internet.
 
 Open Source - Element is entirely open source: all the code is published on GitHub
-(Apache License) for anyone to see and extend. This means teams can customize or
+(AGPLv3 License) for anyone to see and extend. This means teams can customize or
 contribute to the code and everyone can benefit from the speed of community innovation.
 
 Made on Matrix - Element is built on top of Matrix. Matrix is an open network for secure,
@@ -152,7 +152,7 @@ pre, code {
                     crypto ratchet technology available today for a decentralized secure Internet.</p>
 
                     <p><em>Open Source</em> - Element is entirely open source: all the code is published on GitHub
-                    (Apache License) for anyone to see and extend. This means teams can customize or
+                    (AGPLv3 License) for anyone to see and extend. This means teams can customize or
                     contribute to the code and everyone can benefit from the speed of community innovation.</p>
 
                     <p><em>Made on Matrix</em> - Element is built on top of Matrix. Matrix is an open network for secure,

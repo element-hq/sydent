@@ -17,7 +17,7 @@ Hi,
 %(bracketed_room_name)son Element. To join the conversation please follow the
 link below.
 
-%(web_client_location)/#/room/%(room_id_forurl)s?email=%(to_forurl)s&signurl=https%%3A%%2F%%2Fvector.im%%2F_matrix%%2Fidentity%%2Fapi%%2Fv1%%2Fsign-ed25519%%3Ftoken%%3D%(token)s%%26private_key%%3D%(ephemeral_private_key)s&room_name=%(room_name_forurl)s&room_avatar_url=%(room_avatar_url_forurl)s&inviter_name=%(sender_display_name_forurl)s&guest_access_token=%(guest_access_token_forurl)s&guest_user_id=%(guest_user_id_forurl)s
+%(web_client_location)s/#/room/%(room_id_forurl)s?email=%(to_forurl)s&signurl=https%%3A%%2F%%2Fvector.im%%2F_matrix%%2Fidentity%%2Fapi%%2Fv1%%2Fsign-ed25519%%3Ftoken%%3D%(token)s%%26private_key%%3D%(ephemeral_private_key)s&room_name=%(room_name_forurl)s&room_avatar_url=%(room_avatar_url_forurl)s&inviter_name=%(sender_display_name_forurl)s&guest_access_token=%(guest_access_token_forurl)s&guest_user_id=%(guest_user_id_forurl)s&room_type=%(room_type_forurl)s
 
 Element is an open source collaboration app built on the Matrix.org
 open standard for interoperable communication: supporting group chat,
@@ -44,7 +44,7 @@ lets you run your own server, and provides users and teams with the most advance
 crypto ratchet technology available today for a decentralized secure Internet.
 
 Open Source - Element is entirely open source: all the code is published on GitHub
-(Apache License) for anyone to see and extend. This means teams can customize or
+(AGPLv3 License) for anyone to see and extend. This means teams can customize or
 contribute to the code and everyone can benefit from the speed of community innovation.
 
 Made on Matrix - Element is built on top of Matrix. Matrix is an open network for secure,
@@ -128,7 +128,7 @@ room %(bracketed_room_name_forhtml)s on Element.</p>
 
 <p>
     <a
-    href="https://app.element.io/#/room/%(room_id_forurl)s?email=%(to_forurl)s&signurl=https%%3A%%2F%%2Fvector.im%%2F_matrix%%2Fidentity%%2Fapi%%2Fv1%%2Fsign-ed25519%%3Ftoken%%3D%(token)s%%26private_key%%3D%(ephemeral_private_key)s&room_name=%(room_name_forurl)s&room_avatar_url=%(room_avatar_url_forurl)s&inviter_name=%(sender_display_name_forurl)s&guest_access_token=%(guest_access_token_forurl)s&guest_user_id=%(guest_user_id_forurl)s">Join the conversation.</a>
+    href="%(web_client_location)s/#/room/%(room_id_forurl)s?email=%(to_forurl)s&signurl=https%%3A%%2F%%2Fvector.im%%2F_matrix%%2Fidentity%%2Fapi%%2Fv1%%2Fsign-ed25519%%3Ftoken%%3D%(token)s%%26private_key%%3D%(ephemeral_private_key)s&room_name=%(room_name_forurl)s&room_avatar_url=%(room_avatar_url_forurl)s&inviter_name=%(sender_display_name_forurl)s&guest_access_token=%(guest_access_token_forurl)s&guest_user_id=%(guest_user_id_forurl)s&room_type=%(room_type_forurl)s">Join the conversation.</a>
 </p>
 
 <p>Element is an open source collaboration app built on the Matrix.org
@@ -159,7 +159,7 @@ lets you run your own server, and provides users and teams with the most advance
 crypto ratchet technology available today for a decentralized secure Internet.</p>
 
 <p><em>Open Source</em> - Element is entirely open source: all the code is published on GitHub
-(Apache License) for anyone to see and extend. This means teams can customize or
+(AGPLv3 License) for anyone to see and extend. This means teams can customize or
 contribute to the code and everyone can benefit from the speed of community innovation.</p>
 
 <p><em>Made on Matrix</em> - Element is built on top of Matrix. Matrix is an open network for secure,
