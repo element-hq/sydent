@@ -99,7 +99,7 @@ jobs:
       - run-tests
     runs-on: ubuntu-latest
     steps:
-      - uses: matrix-org/done-action@v2
+      - uses: matrix-org/done-action@v3
         with:
           needs: ${{ toJSON(needs) }}
           # The newsfile lint may be skipped on non PR builds or on dependabot builds
