@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: matrix-org/setup-python-poetry@v1
+      - uses: matrix-org/setup-python-poetry@v2
         with:
           python-version: 3.11
           install-project: false
@@ -84,7 +84,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - uses: matrix-org/setup-python-poetry@v1
+      - uses: matrix-org/setup-python-poetry@v2
         with:
          python-version: ${{ matrix.python-version }}
       - run: poetry run trial ${{ matrix.test-dir }}
