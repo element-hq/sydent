@@ -239,7 +239,7 @@ class RemotePeer(Peer[IResponse]):
         updateDeferred: "Deferred[IResponse]" = defer.Deferred()
 
         reqDeferred.addCallback(self._pushSuccess, updateDeferred=updateDeferred)
-        reqDeferred.addErrback(self._pushFailed, updateDeferred=updateDeferred)
+        reqDeferred.addErrback(self._pushFailed, updateDeferred=updateDeferred)  # type: ignore[call-overload]
 
         return updateDeferred
 
@@ -261,7 +261,7 @@ class RemotePeer(Peer[IResponse]):
         else:
             d = readBody(result)
             d.addCallback(self._failedPushBodyRead, updateDeferred=updateDeferred)
-            d.addErrback(self._pushFailed, updateDeferred=updateDeferred)
+            d.addErrback(self._pushFailed, updateDeferred=updateDeferred)  # type: ignore[call-overload]
 
     def _failedPushBodyRead(
         self, body: bytes, updateDeferred: "Deferred[IResponse]"

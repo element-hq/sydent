@@ -30,21 +30,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: matrix-org/setup-python-poetry@v2
-        with:
-          python-version: "3.11"
-          poetry-version: "2.2.1"
-          install-project: false
+      - uses: astral-sh/setup-uv@v5
 
       - name: Import order (isort)
-        run: poetry run isort --check --diff .
+        run: uv run isort --check --diff .
 
       - name: Code style (black)
-        run: poetry run black --check --diff .
+        run: uv run black --check --diff .
 
       - name: Semantic checks (ruff)
         # --quiet suppresses the update check.
-        run: poetry run ruff --quiet .
+        run: uv run ruff --quiet .
 
       - name: Restore/persist mypy's cache
         uses: actions/cache@v5
@@ -55,7 +51,7 @@ jobs:
           restore-keys: mypy-cache-
 
       - name: Typechecking (mypy)
-        run: poetry run mypy
+        run: uv run mypy
 
   docker:
     # Sanity check that we can build the x64 image
@@ -80,16 +76,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10', '3.11']
-        test-dir: ['tests', 'matrix_is_tester']
+        python-version: ['3.10', '3.13']
 
     steps:
       - uses: actions/checkout@v6
-      - uses: matrix-org/setup-python-poetry@v2
+      - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-          poetry-version: "2.2.1"
-      - run: poetry run trial ${{ matrix.test-dir }}
+      - run: uv run trial tests
 
   # a job which runs once all the other jobs are complete, thus allowing PRs to
   # be merged.
@@ -107,4 +101,3 @@ jobs:
           # The newsfile lint may be skipped on non PR builds or on dependabot builds
           skippable:
             check-newsfile
-
