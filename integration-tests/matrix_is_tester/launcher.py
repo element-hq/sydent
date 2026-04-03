@@ -90,7 +90,7 @@ class MatrixIsTestLauncher:
         # XXX: wait for startup in a sensible way
         time.sleep(2)
 
-        self._baseUrl = "http://localhost:%d" % (port,)
+        self._baseUrl = f"http://localhost:{port}"
 
     def tearDown(self):
         print("Stopping sydent...")

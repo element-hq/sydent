@@ -8,7 +8,7 @@
 
 import logging
 import time
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, cast
 
 import attr
 import signedjson.key
@@ -37,15 +37,11 @@ class NoAuthenticationError(Exception):
     Raised when no signature is provided that could be authenticated
     """
 
-    pass
-
 
 class InvalidServerName(Exception):
     """
     Raised when the provided origin parameter is not a valid hostname (plus optional port).
     """
-
-    pass
 
 
 class Verifier:
@@ -59,7 +55,7 @@ class Verifier:
         self.sydent = sydent
         # Cache of server keys. These are cached until the 'valid_until_ts' time
         # in the result.
-        self.cache: Dict[str, CachedVerificationKeys] = {
+        self.cache: dict[str, CachedVerificationKeys] = {
             # server_name: <result from keys query>,
         }
 
@@ -86,7 +82,7 @@ class Verifier:
         # The only use of the cache is in this function, and only to read
         # the two fields mentioned above.
         result = await client.get_json(
-            "matrix://%s/_matrix/key/v2/server/" % server_name, 1024 * 50
+            f"matrix://{server_name}/_matrix/key/v2/server/", 1024 * 50
         )
         if "verify_keys" not in result:
             raise SignatureVerifyException("No key found in response")
@@ -135,8 +131,8 @@ class Verifier:
     async def verifyServerSignedJson(
         self,
         signed_json: SignedMatrixRequest,
-        acceptable_server_names: Optional[List[str]] = None,
-    ) -> Tuple[str, str]:
+        acceptable_server_names: list[str] | None = None,
+    ) -> tuple[str, str]:
         """Given a signed json object, try to verify any one
         of the signatures on it
 
@@ -159,7 +155,7 @@ class Verifier:
                     continue
 
             server_keys = await self._getKeysForServer(server_name)
-            for key_name, sig in sigs.items():
+            for key_name, _sig in sigs.items():
                 if key_name in server_keys:
                     key_bytes = decode_base64(server_keys[key_name]["key"])
                     verify_key = signedjson.key.decode_verify_key_bytes(
@@ -199,7 +195,7 @@ class Verifier:
 
         # Retrieve an origin and signatures from the authorization header.
         origin = None
-        signatures: Dict[str, Dict[str, str]] = {}
+        signatures: dict[str, dict[str, str]] = {}
         for auth in auth_headers:
             if auth.startswith("X-Matrix"):
                 origin, key, sig = parse_auth_header(auth)
@@ -227,7 +223,7 @@ class Verifier:
         return origin
 
 
-def parse_auth_header(header_str: str) -> Tuple[str, str, str]:
+def parse_auth_header(header_str: str) -> tuple[str, str, str]:
     """
     Extracts a server name, signing key and payload signature from an
     "Authorization: X-Matrix ..." header.
@@ -243,11 +239,11 @@ def parse_auth_header(header_str: str) -> Tuple[str, str, str]:
     try:
         # Strip off "X-Matrix " and break up into key-value pairs.
         params = header_str.split(" ")[1].split(",")
-        param_dict: Dict[str, str] = dict(
+        param_dict: dict[str, str] = dict(
             # Cast safety: the split() call will either return a 1- or 2- tuple.
             # If it returns a 1-tuple, dict() will complain with a ValueError
             # so we'll spot the bad header.
-            cast(Tuple[str, str], kv.split("=", maxsplit=1))
+            cast(tuple[str, str], kv.split("=", maxsplit=1))
             for kv in params
         )
 
@@ -261,5 +257,5 @@ def parse_auth_header(header_str: str) -> Tuple[str, str, str]:
         key = strip_quotes(param_dict["key"])
         sig = strip_quotes(param_dict["sig"])
         return origin, key, sig
-    except Exception:
-        raise SignatureVerifyException("Malformed Authorization header")
+    except Exception as e:
+        raise SignatureVerifyException("Malformed Authorization header") from e

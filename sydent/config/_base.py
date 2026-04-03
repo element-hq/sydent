@@ -23,4 +23,3 @@ class BaseConfig(ABC):
             return True, but it *shouldn't* as this leads to altering the
             config file.
         """
-        pass

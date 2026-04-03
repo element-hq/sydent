@@ -8,7 +8,7 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import itertools
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from netaddr import AddrFormatError, IPNetwork, IPSet
 
@@ -51,9 +51,9 @@ DEFAULT_IP_RANGE_BLACKLIST = [
 
 
 def generate_ip_set(
-    ip_addresses: Optional[Iterable[str]],
-    extra_addresses: Optional[Iterable[str]] = None,
-    config_path: Optional[Iterable[str]] = None,
+    ip_addresses: Iterable[str] | None,
+    extra_addresses: Iterable[str] | None = None,
+    config_path: Iterable[str] | None = None,
 ) -> IPSet:
     """
     Generate an IPSet from a list of IP addresses or CIDRs.
@@ -80,9 +80,7 @@ def generate_ip_set(
         try:
             network = IPNetwork(ip)
         except AddrFormatError as e:
-            raise Exception(
-                "Invalid IP range provided: %s." % (ip,), config_path
-            ) from e
+            raise Exception(f"Invalid IP range provided: {ip}.", config_path) from e
         result.add(network)
 
         # It is possible that these already exist in the set, but that's OK.
@@ -104,10 +102,5 @@ def _6to4(network: IPNetwork) -> IPNetwork:
     hex_network = hex(network.first)[2:]
     hex_network = ("0" * (8 - len(hex_network))) + hex_network
     return IPNetwork(
-        "2002:%s:%s::/%d"
-        % (
-            hex_network[:4],
-            hex_network[4:],
-            16 + network.prefixlen,
-        )
+        f"2002:{hex_network[:4]}:{hex_network[4:]}::/{16 + network.prefixlen:d}"
     )

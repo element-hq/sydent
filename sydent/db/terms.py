@@ -7,7 +7,7 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from sydent.sydent import Sydent
@@ -17,7 +17,7 @@ class TermsStore:
     def __init__(self, sydent: "Sydent") -> None:
         self.sydent = sydent
 
-    def getAgreedUrls(self, user_id: str) -> List[str]:
+    def getAgreedUrls(self, user_id: str) -> list[str]:
         """
         Retrieves the URLs of the terms the given user has agreed to.
 
@@ -41,7 +41,7 @@ class TermsStore:
 
         return urls
 
-    def addAgreedUrls(self, user_id: str, urls: List[str]) -> None:
+    def addAgreedUrls(self, user_id: str, urls: list[str]) -> None:
         """
         Saves that the given user has accepted the terms at the given URLs.
 

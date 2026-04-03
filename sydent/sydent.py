@@ -14,7 +14,6 @@ import logging
 import logging.handlers
 import os
 import sqlite3
-from typing import Optional
 
 import attr
 import prometheus_client
@@ -175,7 +174,7 @@ class Sydent:
                 addr=self.config.general.prometheus_addr,
             )
 
-    def ip_from_request(self, request: Request) -> Optional[str]:
+    def ip_from_request(self, request: Request) -> str | None:
         if self.config.http.obey_x_forwarded_for and request.requestHeaders.hasHeader(
             "X-Forwarded-For"
         ):
@@ -188,7 +187,7 @@ class Sydent:
         else:
             return None
 
-    def brand_from_request(self, request: Request) -> Optional[str]:
+    def brand_from_request(self, request: Request) -> str | None:
         """
         If the brand GET parameter is passed, returns that as a string, otherwise returns None.
 
@@ -202,7 +201,7 @@ class Sydent:
 
     def get_branded_template(
         self,
-        brand: Optional[str],
+        brand: str | None,
         template_name: str,
     ) -> str:
         """

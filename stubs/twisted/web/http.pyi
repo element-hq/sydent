@@ -1,5 +1,5 @@
 import typing
-from typing import AnyStr, Dict, List, Optional
+from typing import AnyStr
 
 from twisted.internet import protocol
 from twisted.internet.defer import Deferred
@@ -20,12 +20,12 @@ class Request:
     method: bytes
     uri: bytes
     path: bytes
-    args: Dict[bytes, List[bytes]]
+    args: dict[bytes, list[bytes]]
     content: typing.BinaryIO
-    cookies: List[bytes]
+    cookies: list[bytes]
     requestHeaders: Headers
     responseHeaders: Headers
-    notifications: List[Deferred[None]]
+    notifications: list[Deferred[None]]
     _disconnected: bool
     _log: Logger
 
@@ -45,11 +45,11 @@ class Request:
     # I've narrowed this to ITCPTransport because
     # - we use `self.transport.abortConnection`, which belongs to that interface
     # - twisted does too! in its implementation of HTTPChannel.forceAbortClient
-    transport: Optional[ITCPTransport]
+    transport: ITCPTransport | None
     def __init__(self, channel: HTTPChannel): ...
-    def getHeader(self, key: AnyStr) -> Optional[AnyStr]: ...
+    def getHeader(self, key: AnyStr) -> AnyStr | None: ...
     def handleContentChunk(self, data: bytes) -> None: ...
-    def setResponseCode(self, code: int, message: Optional[bytes] = ...) -> None: ...
+    def setResponseCode(self, code: int, message: bytes | None = ...) -> None: ...
     def setHeader(self, k: AnyStr, v: AnyStr) -> None: ...
     def write(self, data: bytes) -> None: ...
     def finish(self) -> None: ...

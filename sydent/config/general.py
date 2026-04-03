@@ -9,7 +9,6 @@
 
 import os
 from configparser import ConfigParser
-from typing import List
 
 from jinja2.environment import Environment
 from jinja2.loaders import FileSystemLoader
@@ -114,7 +113,7 @@ class GeneralConfig(BaseConfig):
         return False
 
 
-def list_from_comma_sep_string(rawstr: str) -> List[str]:
+def list_from_comma_sep_string(rawstr: str) -> list[str]:
     """
     Parse the a comma seperated string into a list
 

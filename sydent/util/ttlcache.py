@@ -9,7 +9,8 @@
 import enum
 import logging
 import time
-from typing import Callable, Dict, Generic, Literal, Tuple, TypeVar, Union
+from collections.abc import Callable
+from typing import Generic, Literal, TypeVar
 
 import attr
 from sortedcontainers import SortedList
@@ -29,7 +30,7 @@ class TTLCache(Generic[K, V]):
     """A key/value cache implementation where each entry has its own TTL"""
 
     def __init__(self, cache_name: str, timer: Callable[[], float] = time.time):
-        self._data: Dict[K, _CacheEntry[K, V]] = {}
+        self._data: dict[K, _CacheEntry[K, V]] = {}
 
         # the _CacheEntries, sorted by expiry time
         self._expiry_list: SortedList[_CacheEntry] = SortedList()
@@ -56,9 +57,7 @@ class TTLCache(Generic[K, V]):
         self._data[key] = entry
         self._expiry_list.add(entry)
 
-    def get(
-        self, key: K, default: Union[V, Literal[Sentinel.token]] = Sentinel.token
-    ) -> V:
+    def get(self, key: K, default: V | Literal[Sentinel.token] = Sentinel.token) -> V:
         """Get a value from the cache
 
         :param key: The key to look up.
@@ -75,7 +74,7 @@ class TTLCache(Generic[K, V]):
             return default
         return e.value
 
-    def get_with_expiry(self, key: K) -> Tuple[V, float]:
+    def get_with_expiry(self, key: K) -> tuple[V, float]:
         """Get a value, and its expiry time, from the cache
 
         :param key: key to look up
@@ -93,9 +92,7 @@ class TTLCache(Generic[K, V]):
             raise
         return e.value, e.expiry_time
 
-    def pop(
-        self, key: K, default: Union[V, Literal[Sentinel.token]] = Sentinel.token
-    ) -> V:
+    def pop(self, key: K, default: V | Literal[Sentinel.token] = Sentinel.token) -> V:
         """Remove a value from the cache
 
         If key is in the cache, remove it and return its value, else return default.

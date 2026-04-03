@@ -88,7 +88,7 @@ class LookupV2Servlet(SydentResource):
             request.setResponseCode(400)
             return {
                 "errcode": "M_INVALID_PEPPER",
-                "error": "pepper does not match '%s'" % (self.lookup_pepper,),
+                "error": f"pepper does not match '{self.lookup_pepper}'",
                 "algorithm": algorithm,
                 "lookup_pepper": self.lookup_pepper,
             }
@@ -108,8 +108,7 @@ class LookupV2Servlet(SydentResource):
                     request.setResponseCode(400)
                     return {
                         "errcode": "M_UNKNOWN",
-                        "error": 'Invalid "address medium" pair: "%s"'
-                        % address_and_medium,
+                        "error": f'Invalid "address medium" pair: "{address_and_medium}"',
                     }
 
                 # Get the mxid for the address/medium combo if known
@@ -123,9 +122,7 @@ class LookupV2Servlet(SydentResource):
 
             # Return a dictionary of lookup_string: mxid values
             return {
-                "mappings": {
-                    "%s %s" % (x[1], x[0]): x[2] for x in medium_address_mxid_tuples
-                }
+                "mappings": {f"{x[1]} {x[0]}": x[2] for x in medium_address_mxid_tuples}
             }
 
         elif algorithm == "sha256":

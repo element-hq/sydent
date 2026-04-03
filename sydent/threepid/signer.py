@@ -7,7 +7,7 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
 
 import signedjson.sign
 
@@ -20,7 +20,7 @@ class Signer:
     def __init__(self, sydent: "Sydent") -> None:
         self.sydent = sydent
 
-    def signedThreePidAssociation(self, assoc: "ThreepidAssociation") -> Dict[str, Any]:
+    def signedThreePidAssociation(self, assoc: "ThreepidAssociation") -> dict[str, Any]:
         """
         Signs a 3PID association.
 

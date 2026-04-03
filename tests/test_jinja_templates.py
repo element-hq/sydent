@@ -209,7 +209,7 @@ class TestTemplate(unittest.TestCase):
             "vector_verification_sample.txt",
         )
 
-        with open(path, "r") as file:
+        with open(path) as file:
             expected_text = file.read()
 
         # remove the email headers as they are variable

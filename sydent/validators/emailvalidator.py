@@ -9,7 +9,7 @@
 
 import logging
 import urllib
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING
 
 from sydent.db.valsession import ThreePidValSessionStore
 from sydent.util import time_msec
@@ -31,9 +31,9 @@ class EmailValidator:
         emailAddress: str,
         clientSecret: str,
         sendAttempt: int,
-        nextLink: Optional[str],
-        ipaddress: Optional[str] = None,
-        brand: Optional[str] = None,
+        nextLink: str | None,
+        ipaddress: str | None = None,
+        brand: str | None = None,
     ) -> int:
         """
         Creates or retrieves a validation session and sends an email to the corresponding
@@ -100,7 +100,7 @@ class EmailValidator:
         session_id: int,
         token: str,
         clientSecret: str,
-        nextLink: Optional[str],
+        nextLink: str | None,
     ) -> str:
         """
         Creates a validation link that can be sent via email to the user.
@@ -115,13 +115,8 @@ class EmailValidator:
         """
         base = self.sydent.config.http.server_http_url_base
         link = (
-            "%s/_matrix/identity/api/v1/validate/email/submitToken?token=%s&client_secret=%s&sid=%d"
-            % (
-                base,
-                urllib.parse.quote(token),
-                urllib.parse.quote(clientSecret),
-                session_id,
-            )
+            f"{base}/_matrix/identity/api/v1/validate/email/submitToken"
+            f"?token={urllib.parse.quote(token)}&client_secret={urllib.parse.quote(clientSecret)}&sid={session_id:d}"
         )
         if nextLink:
             # manipulate the nextLink to add the sid, because
@@ -133,12 +128,12 @@ class EmailValidator:
                 nextLink += "?"
             nextLink += "sid=" + urllib.parse.quote(str(session_id))
 
-            link += "&nextLink=%s" % (urllib.parse.quote(nextLink))
+            link += f"&nextLink={urllib.parse.quote(nextLink)}"
         return link
 
     def validateSessionWithToken(
         self, sid: int, clientSecret: str, token: str
-    ) -> Dict[str, bool]:
+    ) -> dict[str, bool]:
         """
         Validates the session with the given ID.
 

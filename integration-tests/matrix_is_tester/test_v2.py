@@ -26,7 +26,7 @@ class V2Test(BaseApiTest, unittest.TestCase):
     API_VERSION = "v2"
 
     def setUp(self):
-        super(V2Test, self).setUp()
+        super().setUp()
 
         self.fakeHs = get_shared_fake_hs()
         self.api.make_account(
@@ -45,7 +45,7 @@ class V2Test(BaseApiTest, unittest.TestCase):
 
         hash_details = self.api.hash_details()
 
-        lookup_str = "%s %s" % ("fakeemail3@nowhere.test", "email")
+        lookup_str = "{} {}".format("fakeemail3@nowhere.test", "email")
         body2 = self.api.hashed_lookup(
             [lookup_str], "none", hash_details["lookup_pepper"]
         )

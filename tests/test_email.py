@@ -7,7 +7,6 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from typing import Optional
 from unittest.mock import Mock, patch
 
 from twisted.trial import unittest
@@ -22,7 +21,7 @@ class TestRequestCode(unittest.TestCase):
         # Create a new sydent
         self.sydent = make_sydent()
 
-    def _make_request(self, url: str, body: Optional[JsonDict] = None) -> Mock:
+    def _make_request(self, url: str, body: JsonDict | None = None) -> Mock:
         # Patch out the email sending so we can investigate the resulting email.
         with patch("sydent.util.emailutils.smtplib") as smtplib:
             request, channel = make_request(

@@ -9,7 +9,7 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import logging
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING
 
 import phonenumbers
 
@@ -38,7 +38,7 @@ class MsisdnValidator:
         phoneNumber: phonenumbers.PhoneNumber,
         clientSecret: str,
         send_attempt: int,
-        brand: Optional[str] = None,
+        brand: str | None = None,
     ) -> int:
         """
         Creates or retrieves a validation session and sends an text message to the
@@ -97,7 +97,7 @@ class MsisdnValidator:
 
     def getOriginator(
         self, destPhoneNumber: phonenumbers.PhoneNumber
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         """
         Gets an originator for a given phone number.
 
@@ -130,7 +130,7 @@ class MsisdnValidator:
 
     def validateSessionWithToken(
         self, sid: int, clientSecret: str, token: str
-    ) -> Dict[str, bool]:
+    ) -> dict[str, bool]:
         """
         Validates the session with the given ID.
 

@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-
-# -*- coding: utf-8 -*-
-
 # Copyright 2019 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +22,7 @@ from matrix_is_tester.mailsink import get_shared_mailsink
 logger = logging.getLogger(__name__)
 
 
-class BaseApiTest(object):
+class BaseApiTest:
     """
     Not a test case itself, but can be subclassed to test APIs common
     between versions.
@@ -45,7 +41,7 @@ class BaseApiTest(object):
 
     def test_request_email_code(self):
         body = self.api.request_email_code("fakeemail1@nowhere.test", "sekrit", 1)
-        logger.info("Got response %r" % (body,))
+        logger.info("Got response %r", body)
         self.assertIn("sid", body)
         self.mailSink.get_mail()
 
@@ -130,7 +126,7 @@ class BaseApiTest(object):
             self.assertTrue(is_valid_body["valid"])
 
         mail = self.mailSink.get_mail()
-        logger.info("Got email (invite): %r" % (mail,))
+        logger.info("Got email (invite): %r", mail)
         mail_object = json.loads(mail["data"])
         self.assertEqual(mail_object["token"], body["token"])
         self.assertEqual(mail_object["room_alias"], "#alias:fake.test")

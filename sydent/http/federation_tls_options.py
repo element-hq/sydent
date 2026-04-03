@@ -6,7 +6,7 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 from OpenSSL import SSL
 from twisted.internet import ssl

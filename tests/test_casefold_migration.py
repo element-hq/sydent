@@ -41,13 +41,13 @@ class MigrationTestCase(unittest.TestCase):
         associations = []
 
         for i in range(10):
-            address = "bob%d@example.com" % i
+            address = f"bob{i}@example.com"
             associations.append(
                 {
                     "medium": "email",
                     "address": address,
                     "lookup_hash": calculate_lookup_hash(self.sydent, address),
-                    "mxid": "@bob%d:example.com" % i,
+                    "mxid": f"@bob{i}:example.com",
                     "ts": (i * 10000),
                     "not_before": 0,
                     "not_after": 99999999999,
@@ -55,13 +55,13 @@ class MigrationTestCase(unittest.TestCase):
             )
         # create some casefold-conflicting associations
         for i in range(5):
-            address = "BOB%d@example.com" % i
+            address = f"BOB{i}@example.com"
             associations.append(
                 {
                     "medium": "email",
                     "address": address,
                     "lookup_hash": calculate_lookup_hash(self.sydent, address),
-                    "mxid": "@otherbob%d:example.com" % i,
+                    "mxid": f"@otherbob{i}:example.com",
                     "ts": (i * 10000),
                     "not_before": 0,
                     "not_after": 99999999999,
@@ -108,8 +108,8 @@ class MigrationTestCase(unittest.TestCase):
         originServer = self.sydent.config.general.server_name
 
         for i in range(10):
-            address = "bob%d@example.com" % i
-            mxid = "@bob%d:example.com" % i
+            address = f"bob{i}@example.com"
+            mxid = f"@bob{i}:example.com"
             ts = 10000 * i
             associations.append(
                 {
@@ -131,8 +131,8 @@ class MigrationTestCase(unittest.TestCase):
             )
         # create some casefold-conflicting associations
         for i in range(5):
-            address = "BOB%d@example.com" % i
-            mxid = "@BOB%d:example.com" % i
+            address = f"BOB{i}@example.com"
+            mxid = f"@BOB{i}:example.com"
             ts = 10000 * i
             associations.append(
                 {

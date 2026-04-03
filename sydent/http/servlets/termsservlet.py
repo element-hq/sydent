@@ -67,7 +67,9 @@ class TermsServlet(SydentResource):
         unknown_urls = list(set(user_accepts) - terms.getUrlSet())
         if len(unknown_urls) > 0:
             raise MatrixRestError(
-                400, "M_UNKNOWN", "Unrecognised URLs: %s" % (", ".join(unknown_urls),)
+                400,
+                "M_UNKNOWN",
+                "Unrecognised URLs: {}".format(", ".join(unknown_urls)),
             )
 
         termsStore = TermsStore(self.sydent)

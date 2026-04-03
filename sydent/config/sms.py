@@ -8,7 +8,6 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 from configparser import ConfigParser
-from typing import Dict, List
 
 from sydent.config._base import BaseConfig
 from sydent.config.exceptions import ConfigError
@@ -28,7 +27,7 @@ class SMSConfig(BaseConfig):
         self.api_username = cfg.get("sms", "username").encode("UTF-8")
         self.api_password = cfg.get("sms", "password").encode("UTF-8")
 
-        self.originators: Dict[str, List[Dict[str, str]]] = {}
+        self.originators: dict[str, list[dict[str, str]]] = {}
         self.smsRules = {}
 
         for opt in cfg.options("sms"):
@@ -60,8 +59,7 @@ class SMSConfig(BaseConfig):
 
                 if action not in ["allow", "reject"]:
                     raise ConfigError(
-                        "Invalid SMS rule action: %s, expecting 'allow' or 'reject'"
-                        % action
+                        f"Invalid SMS rule action: {action}, expecting 'allow' or 'reject'"
                     )
 
                 self.smsRules[country] = action

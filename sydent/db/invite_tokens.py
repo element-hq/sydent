@@ -7,7 +7,7 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 import time
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from sydent.sydent import Sydent
@@ -41,7 +41,7 @@ class JoinTokenStore:
         )
         self.sydent.db.commit()
 
-    def getTokens(self, medium: str, address: str) -> List[Dict[str, str]]:
+    def getTokens(self, medium: str, address: str) -> list[dict[str, str]]:
         """
         Retrieves the pending invites tokens for this 3PID that haven't been delivered
         yet.
@@ -62,7 +62,7 @@ class JoinTokenStore:
                 address,
             ),
         )
-        rows: List[Tuple[str, str, str, str, str]] = res.fetchall()
+        rows: list[tuple[str, str, str, str, str]] = res.fetchall()
 
         ret = []
 
@@ -134,7 +134,7 @@ class JoinTokenStore:
         self.sydent.db.commit()
         return cur.rowcount > 0
 
-    def getSenderForToken(self, token: str) -> Optional[str]:
+    def getSenderForToken(self, token: str) -> str | None:
         """
         Retrieves the MXID of the user that sent the invite the provided token is for.
 
@@ -145,7 +145,7 @@ class JoinTokenStore:
         """
         cur = self.sydent.db.cursor()
         res = cur.execute("SELECT sender FROM invite_tokens WHERE token = ?", (token,))
-        rows: List[Tuple[str]] = res.fetchall()
+        rows: list[tuple[str]] = res.fetchall()
         if rows:
             return rows[0][0]
         return None
