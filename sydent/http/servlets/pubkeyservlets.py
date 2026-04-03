@@ -7,63 +7,39 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from typing import TYPE_CHECKING
-
-from twisted.web.server import Request
+from aiohttp import web
 from unpaddedbase64 import encode_base64
 
 from sydent.db.invite_tokens import JoinTokenStore
-from sydent.http.servlets import SydentResource, get_args, jsonwrap
-from sydent.types import JsonDict
-
-if TYPE_CHECKING:
-    from sydent.sydent import Sydent
+from sydent.http.servlets import get_args, json_response
 
 
-class Ed25519Servlet(SydentResource):
-    isLeaf = True
+async def handle_ed25519_get(request: web.Request) -> web.Response:
+    sydent = request.app["sydent"]
+    pubKey = sydent.keyring.ed25519.verify_key
+    pubKeyBase64 = encode_base64(pubKey.encode())
 
-    def __init__(self, syd: "Sydent") -> None:
-        super().__init__()
-        self.sydent = syd
-
-    @jsonwrap
-    def render_GET(self, request: Request) -> JsonDict:
-        pubKey = self.sydent.keyring.ed25519.verify_key
-        pubKeyBase64 = encode_base64(pubKey.encode())
-
-        return {"public_key": pubKeyBase64}
+    return json_response({"public_key": pubKeyBase64})
 
 
-class PubkeyIsValidServlet(SydentResource):
-    isLeaf = True
+async def handle_pubkey_is_valid_get(request: web.Request) -> web.Response:
+    sydent = request.app["sydent"]
+    args = await get_args(request, ("public_key",))
 
-    def __init__(self, syd: "Sydent") -> None:
-        super().__init__()
-        self.sydent = syd
+    pubKey = sydent.keyring.ed25519.verify_key
+    pubKeyBase64 = encode_base64(pubKey.encode())
 
-    @jsonwrap
-    def render_GET(self, request: Request) -> JsonDict:
-        args = get_args(request, ("public_key",))
-
-        pubKey = self.sydent.keyring.ed25519.verify_key
-        pubKeyBase64 = encode_base64(pubKey.encode())
-
-        return {"valid": args["public_key"] == pubKeyBase64}
+    return json_response({"valid": args["public_key"] == pubKeyBase64})
 
 
-class EphemeralPubkeyIsValidServlet(SydentResource):
-    isLeaf = True
+async def handle_ephemeral_pubkey_is_valid_get(request: web.Request) -> web.Response:
+    sydent = request.app["sydent"]
+    joinTokenStore = JoinTokenStore(sydent)
+    args = await get_args(request, ("public_key",))
+    publicKey = args["public_key"]
 
-    def __init__(self, syd: "Sydent") -> None:
-        super().__init__()
-        self.joinTokenStore = JoinTokenStore(syd)
-
-    @jsonwrap
-    def render_GET(self, request: Request) -> JsonDict:
-        args = get_args(request, ("public_key",))
-        publicKey = args["public_key"]
-
-        return {
-            "valid": self.joinTokenStore.validateEphemeralPublicKey(publicKey),
+    return json_response(
+        {
+            "valid": joinTokenStore.validateEphemeralPublicKey(publicKey),
         }
+    )

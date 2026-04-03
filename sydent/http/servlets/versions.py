@@ -7,23 +7,17 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from twisted.web.server import Request
+from aiohttp import web
 
-from sydent.http.servlets import SydentResource, jsonwrap, send_cors
-from sydent.types import JsonDict
+from sydent.http.servlets import json_response
 
 
-class VersionsServlet(SydentResource):
-    isLeaf = True
-
-    @jsonwrap
-    def render_GET(self, request: Request) -> JsonDict:
-        """
-        Return the supported Matrix versions.
-        """
-        send_cors(request)
-
-        return {
+async def handle_versions_get(request: web.Request) -> web.Response:
+    """
+    Return the supported Matrix versions.
+    """
+    return json_response(
+        {
             "versions": [
                 "r0.1.0",
                 "r0.2.0",
@@ -36,7 +30,4 @@ class VersionsServlet(SydentResource):
                 "v1.5",
             ]
         }
-
-    def render_OPTIONS(self, request: Request) -> bytes:
-        send_cors(request)
-        return b""
+    )

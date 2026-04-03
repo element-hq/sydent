@@ -9,21 +9,13 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import logging
-from typing import TYPE_CHECKING
 
 import phonenumbers
-from twisted.web.server import Request
+from aiohttp import web
 
 from sydent.http.auth import authV2
-from sydent.http.servlets import (
-    SydentResource,
-    asyncjsonwrap,
-    get_args,
-    jsonwrap,
-    send_cors,
-)
+from sydent.http.servlets import get_args, json_response
 from sydent.types import JsonDict
-from sydent.util.ratelimiter import Ratelimiter
 from sydent.util.stringutils import is_valid_client_secret
 from sydent.validators import (
     DestinationRejectedException,
@@ -33,226 +25,202 @@ from sydent.validators import (
     SessionExpiredException,
 )
 
-if TYPE_CHECKING:
-    from sydent.sydent import Sydent
-
 logger = logging.getLogger(__name__)
 
 
-class MsisdnRequestCodeServlet(SydentResource):
-    isLeaf = True
+async def handle_msisdn_request_code_post(
+    request: web.Request, require_auth: bool = False
+) -> web.Response:
+    sydent = request.app["sydent"]
 
-    def __init__(self, syd: "Sydent", require_auth: bool = False) -> None:
-        super().__init__()
-        self.sydent = syd
-        self.require_auth = require_auth
-        self._msisdn_ratelimiter = Ratelimiter[str](
-            syd.reactor,
-            syd.config.sms.msisdn_ratelimit_burst,
-            syd.config.sms.msisdn_ratelimit_rate_hz,
-        )
-        self._country_ratelimiter = Ratelimiter[int](
-            syd.reactor,
-            syd.config.sms.country_ratelimit_burst,
-            syd.config.sms.country_ratelimit_rate_hz,
-        )
+    if require_auth:
+        await authV2(sydent, request)
 
-    @asyncjsonwrap
-    async def render_POST(self, request: Request) -> JsonDict:
-        send_cors(request)
+    args = await get_args(
+        request, ("phone_number", "country", "client_secret", "send_attempt")
+    )
 
-        if self.require_auth:
-            authV2(self.sydent, request)
-
-        args = get_args(
-            request, ("phone_number", "country", "client_secret", "send_attempt")
-        )
-
-        raw_phone_number = args["phone_number"]
-        country = args["country"]
-        try:
-            # See the comment handling `send_attempt` in emailservlet.py for
-            # more context.
-            sendAttempt = int(args["send_attempt"])
-        except (TypeError, ValueError):
-            request.setResponseCode(400)
-            return {
+    raw_phone_number = args["phone_number"]
+    country = args["country"]
+    try:
+        sendAttempt = int(args["send_attempt"])
+    except (TypeError, ValueError):
+        return json_response(
+            {
                 "errcode": "M_INVALID_PARAM",
                 "error": f"send_attempt should be an integer (got {args['send_attempt']}",
-            }
-        clientSecret = args["client_secret"]
+            },
+            status=400,
+        )
+    clientSecret = args["client_secret"]
 
-        if not is_valid_client_secret(clientSecret):
-            request.setResponseCode(400)
-            return {
+    if not is_valid_client_secret(clientSecret):
+        return json_response(
+            {
                 "errcode": "M_INVALID_PARAM",
                 "error": "Invalid client_secret provided",
-            }
+            },
+            status=400,
+        )
 
-        try:
-            phone_number_object = phonenumbers.parse(raw_phone_number, country)
+    try:
+        phone_number_object = phonenumbers.parse(raw_phone_number, country)
 
-            if phone_number_object.country_code is None:
-                raise Exception("No country code")
-        except Exception as e:
-            logger.warning("Invalid phone number given: %r", e)
-            request.setResponseCode(400)
-            return {
+        if phone_number_object.country_code is None:
+            raise Exception("No country code")
+    except Exception as e:
+        logger.warning("Invalid phone number given: %r", e)
+        return json_response(
+            {
                 "errcode": "M_INVALID_PHONE_NUMBER",
                 "error": "Invalid phone number",
-            }
-
-        msisdn = phonenumbers.format_number(
-            phone_number_object, phonenumbers.PhoneNumberFormat.E164
-        )[1:]
-
-        self._msisdn_ratelimiter.ratelimit(msisdn, "Limit exceeded for this number")
-        self._country_ratelimiter.ratelimit(
-            phone_number_object.country_code, "Limit exceeded for this country"
+            },
+            status=400,
         )
 
-        # International formatted number. The same as an E164 but with spaces
-        # in appropriate places to make it nicer for the humans.
-        intl_fmt = phonenumbers.format_number(
-            phone_number_object, phonenumbers.PhoneNumberFormat.INTERNATIONAL
-        )
+    msisdn = phonenumbers.format_number(
+        phone_number_object, phonenumbers.PhoneNumberFormat.E164
+    )[1:]
 
-        brand = self.sydent.brand_from_request(request)
-        try:
-            sid = await self.sydent.validators.msisdn.requestToken(
-                phone_number_object, clientSecret, sendAttempt, brand
-            )
-            resp = {
-                "success": True,
-                "sid": str(sid),
-                "msisdn": msisdn,
-                "intl_fmt": intl_fmt,
-            }
-        except DestinationRejectedException:
-            logger.warning("Destination rejected for number: %s", msisdn)
-            request.setResponseCode(400)
-            resp = {
+    # Ratelimiters are pre-populated in the app dict by httpserver.py.
+
+    request.app["msisdn_ratelimiter"].ratelimit(
+        msisdn, "Limit exceeded for this number"
+    )
+    request.app["country_ratelimiter"].ratelimit(
+        phone_number_object.country_code, "Limit exceeded for this country"
+    )
+
+    # International formatted number.
+    intl_fmt = phonenumbers.format_number(
+        phone_number_object, phonenumbers.PhoneNumberFormat.INTERNATIONAL
+    )
+
+    brand = sydent.brand_from_request(request)
+    try:
+        sid = await sydent.validators.msisdn.requestToken(
+            phone_number_object, clientSecret, sendAttempt, brand
+        )
+        resp = {
+            "success": True,
+            "sid": str(sid),
+            "msisdn": msisdn,
+            "intl_fmt": intl_fmt,
+        }
+    except DestinationRejectedException:
+        logger.warning("Destination rejected for number: %s", msisdn)
+        return json_response(
+            {
                 "errcode": "M_DESTINATION_REJECTED",
                 "error": "Phone numbers in this country are not currently supported",
-            }
-        except Exception:
-            logger.exception("Exception sending SMS")
-            request.setResponseCode(500)
-            resp = {"errcode": "M_UNKNOWN", "error": "Internal Server Error"}
+            },
+            status=400,
+        )
+    except Exception:
+        logger.exception("Exception sending SMS")
+        return json_response(
+            {"errcode": "M_UNKNOWN", "error": "Internal Server Error"},
+            status=500,
+        )
 
-        return resp
-
-    def render_OPTIONS(self, request: Request) -> bytes:
-        send_cors(request)
-        return b""
+    return json_response(resp)
 
 
-class MsisdnValidateCodeServlet(SydentResource):
-    isLeaf = True
+async def handle_msisdn_validate_code_get(
+    request: web.Request, require_auth: bool = False
+) -> web.Response:
+    sydent = request.app["sydent"]
 
-    def __init__(self, syd: "Sydent", require_auth: bool = False) -> None:
-        super().__init__()
-        self.sydent = syd
-        self.require_auth = require_auth
+    args = await get_args(request, ("token", "sid", "client_secret"))
+    resp = await _do_msisdn_validate_request(sydent, request)
+    if "success" in resp and resp["success"]:
+        msg = (
+            "Verification successful! Please return to your Matrix client to continue."
+        )
+        if "next_link" in args:
+            next_link = args["next_link"]
+            raise web.HTTPFound(location=next_link)
+    else:
+        msg = "Verification failed: you may need to request another verification text"
 
-    def render_GET(self, request: Request) -> str:
-        send_cors(request)
+    brand = sydent.brand_from_request(request)
 
-        args = get_args(request, ("token", "sid", "client_secret"))
-        resp = self.do_validate_request(request)
-        if "success" in resp and resp["success"]:
-            msg = "Verification successful! Please return to your Matrix client to continue."
-            if "next_link" in args:
-                next_link = args["next_link"]
-                request.setResponseCode(302)
-                request.setHeader("Location", next_link)
-        else:
-            request.setResponseCode(400)
-            msg = (
-                "Verification failed: you may need to request another verification text"
-            )
+    # sydent.config.http.verify_response_template is deprecated
+    if sydent.config.http.verify_response_template is None:
+        templateFile = sydent.get_branded_template(
+            brand,
+            "verify_response_template.html",
+        )
+    else:
+        templateFile = sydent.config.http.verify_response_template
 
-        brand = self.sydent.brand_from_request(request)
+    res = open(templateFile).read() % {"message": msg}
+    return web.Response(text=res, content_type="text/html")
 
-        # self.sydent.config.http.verify_response_template is deprecated
-        if self.sydent.config.http.verify_response_template is None:
-            templateFile = self.sydent.get_branded_template(
-                brand,
-                "verify_response_template.html",
-            )
-        else:
-            templateFile = self.sydent.config.http.verify_response_template
 
-        request.setHeader("Content-Type", "text/html")
-        return open(templateFile).read() % {"message": msg}
+async def handle_msisdn_validate_code_post(
+    request: web.Request, require_auth: bool = False
+) -> web.Response:
+    sydent = request.app["sydent"]
 
-    @jsonwrap
-    def render_POST(self, request: Request) -> JsonDict:
-        send_cors(request)
+    if require_auth:
+        await authV2(sydent, request)
 
-        if self.require_auth:
-            authV2(self.sydent, request)
+    result = await _do_msisdn_validate_request(sydent, request)
+    return json_response(result)
 
-        return self.do_validate_request(request)
 
-    def do_validate_request(self, request: Request) -> JsonDict:
-        """
-        Extracts information about a validation session from the request and
-        attempts to validate that session.
+async def _do_msisdn_validate_request(
+    sydent: "object", request: web.Request
+) -> JsonDict:
+    """
+    Extracts information about a validation session from the request and
+    attempts to validate that session.
 
-        :param request: The request to extract information about the session from.
+    :param sydent: The Sydent instance.
+    :param request: The request to extract information about the session from.
 
-        :return: A dict with a "success" key which value indicates whether the
-            validation succeeded. If the validation failed, this dict also includes
-            a "errcode" and a "error" keys which include information about the failure.
-        """
+    :return: A dict with a "success" key which value indicates whether the
+        validation succeeded. If the validation failed, this dict also includes
+        a "errcode" and a "error" keys which include information about the failure.
+    """
+    args = await get_args(request, ("token", "sid", "client_secret"))
 
-        args = get_args(request, ("token", "sid", "client_secret"))
+    sid = args["sid"]
+    tokenString = args["token"]
+    clientSecret = args["client_secret"]
 
-        sid = args["sid"]
-        tokenString = args["token"]
-        clientSecret = args["client_secret"]
+    if not is_valid_client_secret(clientSecret):
+        return {
+            "errcode": "M_INVALID_PARAM",
+            "error": "Invalid client_secret provided",
+        }
 
-        if not is_valid_client_secret(clientSecret):
-            request.setResponseCode(400)
-            return {
-                "errcode": "M_INVALID_PARAM",
-                "error": "Invalid client_secret provided",
-            }
-
-        try:
-            return self.sydent.validators.msisdn.validateSessionWithToken(
-                sid, clientSecret, tokenString
-            )
-        except IncorrectClientSecretException:
-            request.setResponseCode(400)
-            return {
-                "success": False,
-                "errcode": "M_INVALID_PARAM",
-                "error": "Client secret does not match the one given when requesting the token",
-            }
-        except SessionExpiredException:
-            request.setResponseCode(400)
-            return {
-                "success": False,
-                "errcode": "M_SESSION_EXPIRED",
-                "error": "This validation session has expired: call requestToken again",
-            }
-        except InvalidSessionIdException:
-            request.setResponseCode(400)
-            return {
-                "success": False,
-                "errcode": "M_INVALID_PARAM",
-                "error": "The token doesn't match",
-            }
-        except IncorrectSessionTokenException:
-            request.setResponseCode(404)
-            return {
-                "success": False,
-                "errcode": "M_NO_VALID_SESSION",
-                "error": "No session could be found with this sid",
-            }
-
-    def render_OPTIONS(self, request: Request) -> bytes:
-        send_cors(request)
-        return b""
+    try:
+        return sydent.validators.msisdn.validateSessionWithToken(
+            sid, clientSecret, tokenString
+        )
+    except IncorrectClientSecretException:
+        return {
+            "success": False,
+            "errcode": "M_INVALID_PARAM",
+            "error": "Client secret does not match the one given when requesting the token",
+        }
+    except SessionExpiredException:
+        return {
+            "success": False,
+            "errcode": "M_SESSION_EXPIRED",
+            "error": "This validation session has expired: call requestToken again",
+        }
+    except InvalidSessionIdException:
+        return {
+            "success": False,
+            "errcode": "M_INVALID_PARAM",
+            "error": "The token doesn't match",
+        }
+    except IncorrectSessionTokenException:
+        return {
+            "success": False,
+            "errcode": "M_NO_VALID_SESSION",
+            "error": "No session could be found with this sid",
+        }
