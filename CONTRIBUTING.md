@@ -125,14 +125,14 @@ Some other points to follow:
 
  * Please base your changes on the `main` branch.
 
- * Please follow the [code style requirements](#code-style).
+ * Please follow the [code style requirements](#code-style-and-continuous-integration).
 
  * Please include a [changelog entry](#changelog) with each PR.
 
  * Please [sign off](#sign-off) your contribution.
 
  * Please keep an eye on the pull request for feedback from the [continuous
-   integration system](#continuous-integration-and-testing) and try to fix any
+   integration system](#code-style-and-continuous-integration) and try to fix any
    errors that come up.
 
  * If you need to [update your PR](#updating-your-pull-request), just add new
@@ -140,8 +140,8 @@ Some other points to follow:
 
 ## Code style and continuous integration
 
-Sydent uses `black`, `isort` and `ruff` to enforce code style. Use the following
-script to enforce these style guides:
+Sydent uses [ruff](https://docs.astral.sh/ruff/) for linting, import sorting and
+formatting. Use the following script to apply these style guides:
 
 ```shell
 uv run scripts-dev/lint.sh
@@ -288,7 +288,7 @@ flag to `git commit`, which uses the name and email set in your
 
 If you decide to make changes to your pull request - perhaps to address issues
 raised in a review, or to fix problems highlighted by [continuous
-integration](#continuous-integration-and-testing) - just add new commits to your
+integration](#code-style-and-continuous-integration) - just add new commits to your
 branch, and push to GitHub. The pull request will automatically be updated.
 
 Please **avoid** rebasing your branch, especially once the PR has been
