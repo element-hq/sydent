@@ -33,17 +33,17 @@ To install Sydent's dependencies on a Debian-based system, run::
 Installing from source
 ~~~~~~~~~~~~~~~~~~~~~~
 
-First install `poetry`. See `poetry's documentation <https://python-poetry.org/docs/#installation>`_ for details; we recommend installing via `pipx`. Once that's done::
+First install `uv <https://docs.astral.sh/uv/getting-started/installation/>`_. Once that's done::
 
     git clone https://github.com/element-hq/sydent.git
     cd sydent
-    poetry install --no-dev
+    uv sync --no-dev
     # For development, pull in extra tools with
-    # poetry install
+    # uv sync
 
 To start Sydent::
 
-    poetry run sydent
+    uv run sydent
 
 Running Sydent
 ==============
