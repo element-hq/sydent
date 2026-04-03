@@ -1,6 +1,0 @@
-from typing import Any
-
-class ConnectError(Exception):
-    def __init__(self, osError: Any | None = ..., string: str = ...): ...
-
-class DNSLookupError(IOError): ...
