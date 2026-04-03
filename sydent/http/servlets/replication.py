@@ -46,6 +46,11 @@ class ReplicationPushServlet(SydentResource):
         peerCert = cast(X509, request.transport.getPeerCertificate())
         peerCertCn = peerCert.get_subject().commonName
 
+        if peerCertCn is None:
+            raise MatrixRestError(
+                403, "M_UNKNOWN_PEER", "Peer certificate has no commonName"
+            )
+
         peerStore = PeerStore(self.sydent)
 
         peer = peerStore.getPeerByName(peerCertCn)
