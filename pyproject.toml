@@ -29,7 +29,6 @@ dependencies = [
     "signedjson>=1.1.1",
     "sortedcontainers>=2.1.0",
     "twisted>=18.4.0",
-    "typing-extensions>=3.7.4",
     "unpaddedbase64>=1.1.0",
     "zope.interface>=4.6.0",
 ]
