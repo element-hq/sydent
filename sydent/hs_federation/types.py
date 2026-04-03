@@ -1,7 +1,6 @@
-from typing import Dict
+from typing import Dict, TypedDict
 
 import attr
-from typing_extensions import TypedDict
 
 from sydent.types import JsonDict
 
