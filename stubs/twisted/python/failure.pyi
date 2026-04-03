@@ -12,7 +12,9 @@ class Failure(BaseException):
         captureVars: bool = ...,
     ): ...
     @overload
-    def check(self, singleErrorType: Type[_E]) -> Optional[_E]: ...
+    def check(  # type: ignore[overload-overlap]
+        self, singleErrorType: Type[_E]
+    ) -> Optional[_E]: ...
     @overload
     def check(
         self, *errorTypes: Union[str, Type[Exception]]

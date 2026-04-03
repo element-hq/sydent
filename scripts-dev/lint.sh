@@ -6,7 +6,6 @@ set -ex
 # consistent with CI.
 
 black .
-# --quiet suppresses the update check.
-ruff --quiet .
+ruff check .
 isort .
 mypy

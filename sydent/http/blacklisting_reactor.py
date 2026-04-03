@@ -18,7 +18,7 @@ from twisted.internet.interfaces import (
     IReactorPluggableNameResolver,
     IResolutionReceiver,
 )
-from zope.interface import implementer, provider
+from zope.interface import implementer
 
 logger = logging.getLogger(__name__)
 
@@ -97,22 +97,19 @@ class _IPBlacklistingResolver:
                     recv.addressResolved(address)
             recv.resolutionComplete()
 
-        @provider(IResolutionReceiver)
+        @implementer(IResolutionReceiver)
         class EndpointReceiver:
-            @staticmethod
-            def resolutionBegan(resolutionInProgress: IHostResolution) -> None:
+            def resolutionBegan(self, resolutionInProgress: IHostResolution) -> None:
                 recv.resolutionBegan(resolutionInProgress)
 
-            @staticmethod
-            def addressResolved(address: IAddress) -> None:
+            def addressResolved(self, address: IAddress) -> None:
                 addresses.append(address)
 
-            @staticmethod
-            def resolutionComplete() -> None:
+            def resolutionComplete(self) -> None:
                 _callback()
 
         self._reactor.nameResolver.resolveHostName(
-            EndpointReceiver, hostname, portNumber=portNumber
+            EndpointReceiver(), hostname, portNumber=portNumber
         )
 
         return recv

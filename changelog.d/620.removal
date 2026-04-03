@@ -1,0 +1,1 @@
+Drop support for Python 3.10 and older. Sydent now requires Python 3.11 or later.

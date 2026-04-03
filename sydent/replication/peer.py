@@ -189,7 +189,7 @@ class RemotePeer(Peer[IResponse]):
 
         # Attach metadata
         self.verify_key.alg = SIGNING_KEY_ALGORITHM
-        self.verify_key.version = 0
+        self.verify_key.version = "0"
 
     def verifySignedAssociation(self, assoc: JsonDict) -> None:
         """Verifies a signature on a signed association. Raises an exception if the
@@ -280,7 +280,7 @@ class RemotePeer(Peer[IResponse]):
     def _pushFailed(
         self,
         failure: Failure,
-        updateDeferred: "Deferred[object]",
+        updateDeferred: "Deferred[IResponse]",
     ) -> None:
         """
         Processes a failed push request, by calling the error callback of the given

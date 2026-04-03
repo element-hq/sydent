@@ -125,7 +125,7 @@ class LocalAssociationStore:
         """
         assocs = {}
 
-        (localAssocs, maxId) = self.getAssociationsAfterId(afterId, limit)
+        localAssocs, maxId = self.getAssociationsAfterId(afterId, limit)
 
         signer = Signer(self.sydent)
 

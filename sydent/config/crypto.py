@@ -47,7 +47,9 @@ class CryptoConfig(BaseConfig):
             # old format key
             print("INFO: Updating signing key format: brace yourselves")
 
-            self.signing_key = nacl.signing.SigningKey(
+            # signedjson's SigningKey protocol adds the version and alg
+            # attributes, which the next two lines set.
+            self.signing_key = nacl.signing.SigningKey(  # type: ignore[assignment]
                 signing_key_str.encode("ascii"), encoder=nacl.encoding.HexEncoder
             )
             self.signing_key.version = "0"

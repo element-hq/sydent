@@ -45,5 +45,6 @@ def optionsForClientTLS(
 
 # Type ignore: I don't want to respecify the methods on the interface that we
 # don't use.
-@implementer(IOpenSSLTrustRoot)  # type: ignore[misc]
-class OpenSSLDefaultPaths: ...
+@implementer(IOpenSSLTrustRoot)
+class OpenSSLDefaultPaths:  # type: ignore[misc]
+    ...

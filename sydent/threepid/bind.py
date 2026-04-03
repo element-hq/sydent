@@ -10,7 +10,7 @@
 import collections
 import logging
 import math
-from typing import TYPE_CHECKING, Any, Dict, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Union
 
 import signedjson.sign
 from twisted.internet import defer
@@ -87,22 +87,18 @@ class ThreepidBinder:
 
         joinTokenStore = JoinTokenStore(self.sydent)
         pendingJoinTokens = joinTokenStore.getTokens(medium, normalised_address)
-        invites = []
-        # Widen the value type to Any: we're going to set the signed key
-        # to point to a dict, but pendingJoinTokens yields Dict[str, str]
-        token: Dict[str, Any]
+        invites: List[Dict[str, Any]] = []
         for token in pendingJoinTokens:
-            token["mxid"] = mxid
             presigned = {
                 "mxid": mxid,
                 "token": token["token"],
             }
-            token["signed"] = signedjson.sign.sign_json(
+            signed = signedjson.sign.sign_json(
                 presigned,
                 self.sydent.config.general.server_name,
                 self.sydent.keyring.ed25519,
             )
-            invites.append(token)
+            invites.append({**token, "mxid": mxid, "signed": signed})
         if invites:
             assoc.extra_fields["invites"] = invites
             joinTokenStore.markTokensAsSent(medium, normalised_address)

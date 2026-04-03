@@ -37,7 +37,7 @@ class BlacklistingAgentTest(TestCase):
         self.allowed_domain, self.allowed_ip = b"allowed.test", b"5.1.1.1"
 
         # Configure the reactor's DNS resolver.
-        for (domain, ip) in (
+        for domain, ip in (
             (self.safe_domain, self.safe_ip),
             (self.unsafe_domain, self.unsafe_ip),
             (self.allowed_domain, self.allowed_ip),
@@ -219,7 +219,7 @@ class BlacklistingAgentTest(TestCase):
 
     def _get_http_request(self, expected_host, expected_port):
         clients = self.reactor.tcpClients
-        (host, port, factory, _timeout, _bindAddress) = clients[-1]
+        host, port, factory, _timeout, _bindAddress = clients[-1]
         self.assertEqual(host, expected_host)
         self.assertEqual(port, expected_port)
 
