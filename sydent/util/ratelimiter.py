@@ -7,12 +7,10 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
+import asyncio
 import logging
 from http import HTTPStatus
 from typing import Generic, TypeVar
-
-from twisted.internet import task
-from twisted.internet.interfaces import IReactorTime
 
 from sydent.http.servlets import MatrixRestError
 
@@ -33,14 +31,13 @@ class Ratelimiter(Generic[K]):
     """A ratelimiter based on leaky token bucket algorithm.
 
     Args:
-        reactor
         burst: the number of requests that can happen at once before we start
             ratelimiting
         rate_hz: The maximum average sustained rate in hertz of requests we'll
             accept.
     """
 
-    def __init__(self, reactor: IReactorTime, burst: int, rate_hz: float) -> None:
+    def __init__(self, burst: int, rate_hz: float) -> None:
         # The "burst" count (or the capacity of each bucket in leaky bucket
         # algorithm).
         self._burst = burst
@@ -51,10 +48,28 @@ class Ratelimiter(Generic[K]):
         # Entries are removed when token count hits zero.
         self._buckets: dict[K, int] = {}
 
-        # We remove tokens from all buckets at `rate_hz` hertz.
-        call = task.LoopingCall(self._periodic_call)
-        call.clock = reactor
-        call.start(1 / rate_hz)
+        self._rate_hz = rate_hz
+        self._task: asyncio.Task[None] | None = None
+
+    async def start(self) -> None:
+        """Start the background task that drains tokens."""
+        self._task = asyncio.ensure_future(self._drain_loop())
+
+    async def stop(self) -> None:
+        """Stop the background drain task."""
+        if self._task is not None:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+
+    async def _drain_loop(self) -> None:
+        """Periodically remove tokens from all active buckets."""
+        interval = 1.0 / self._rate_hz
+        while True:
+            await asyncio.sleep(interval)
+            self._periodic_call()
 
     def _periodic_call(self) -> None:
         # Take one away from all active buckets. If a bucket reaches zero then

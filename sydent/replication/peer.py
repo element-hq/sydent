@@ -14,13 +14,9 @@ from abc import abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Generic, TypeVar
 
+import aiohttp
 import signedjson.key
 import signedjson.sign
-from twisted.internet import defer
-from twisted.internet.defer import Deferred
-from twisted.python.failure import Failure
-from twisted.web.client import readBody
-from twisted.web.iweb import IResponse
 from unpaddedbase64 import decode_base64
 
 from sydent.config.exceptions import ConfigError
@@ -45,7 +41,7 @@ SIGNING_KEY_ALGORITHM = "ed25519"
 class Peer(Generic[PushUpdateReturn]):
     def __init__(self, servername: str, pubkeys: dict[str, str]):
         """
-        :param server_name: The peer's server name.
+        :param servername: The peer's server name.
         :param pubkeys: The peer's public keys in a Dict[key_id, key_b64]
         """
         self.servername = servername
@@ -53,9 +49,9 @@ class Peer(Generic[PushUpdateReturn]):
         self.is_being_pushed_to = False
 
     @abstractmethod
-    def pushUpdates(self, sgAssocs: SignedAssociations) -> "Deferred[PushUpdateReturn]":
+    async def pushUpdates(self, sgAssocs: SignedAssociations) -> PushUpdateReturn:
         """
-        :param sgAssocs: Map from originId to sgAssoc,  where originId is the id
+        :param sgAssocs: Map from originId to sgAssoc, where originId is the id
                          on the creating server and sgAssoc is the json object
                          of the signed association
         """
@@ -64,7 +60,8 @@ class Peer(Generic[PushUpdateReturn]):
 
 class LocalPeer(Peer[bool]):
     """
-    The local peer (ourselves: essentially copying from the local associations table to the global one)
+    The local peer (ourselves: essentially copying from the local associations
+    table to the global one).
     """
 
     def __init__(self, sydent: "Sydent") -> None:
@@ -76,14 +73,14 @@ class LocalPeer(Peer[bool]):
         lastId = globalAssocStore.lastIdFromServer(self.servername)
         self.lastId = lastId if lastId is not None else -1
 
-    def pushUpdates(self, sgAssocs: SignedAssociations) -> "Deferred[bool]":
+    def pushUpdates(self, sgAssocs: SignedAssociations) -> bool:
         """
-        Saves the given associations in the global associations store. Only stores an
-        association if its ID is greater than the last seen ID.
+        Saves the given associations in the global associations store. Only
+        stores an association if its ID is greater than the last seen ID.
 
         :param sgAssocs: The associations to save.
 
-        :return: A deferred that succeeds with the value `True`.
+        :return: True on success.
         """
         globalAssocStore = GlobalAssociationStore(self.sydent)
         for localId in sgAssocs:
@@ -107,8 +104,6 @@ class LocalPeer(Peer[bool]):
                     )
                     assocObj.lookup_hash = sha256_and_url_safe_base64(str_to_hash)
 
-                    # We can probably skip verification for the local peer (although it could
-                    # be good as a sanity check)
                     globalAssocStore.addAssociation(
                         assocObj,
                         json.dumps(sgAssocs[localId]),
@@ -120,11 +115,10 @@ class LocalPeer(Peer[bool]):
                         assocObj.medium, assocObj.address
                     )
 
-        d = defer.succeed(True)
-        return d
+        return True
 
 
-class RemotePeer(Peer[IResponse]):
+class RemotePeer(Peer[aiohttp.ClientResponse]):
     def __init__(
         self,
         sydent: "Sydent",
@@ -150,7 +144,7 @@ class RemotePeer(Peer[IResponse]):
         if replication_url is None:
             if not port:
                 port = 1001
-            replication_url = f"https://{server_name}:{port}"
+            replication_url = "https://%s:%i" % (server_name, port)
 
         if replication_url[-1:] != "/":
             replication_url += "/"
@@ -182,7 +176,7 @@ class RemotePeer(Peer[IResponse]):
             except Exception as e:
                 raise ConfigError(
                     f"Unable to decode public key for peer {server_name}: {e}",
-                ) from e
+                )
 
         self.verify_key = signedjson.key.decode_verify_key_bytes(
             SIGNING_KEY_ALGORITHM + ":", pubkey_decoded
@@ -216,82 +210,35 @@ class RemotePeer(Peer[IResponse]):
         # Verify the JSON
         signedjson.sign.verify_signed_json(assoc, self.servername, self.verify_key)
 
-    def pushUpdates(self, sgAssocs: SignedAssociations) -> "Deferred[IResponse]":
+    async def pushUpdates(self, sgAssocs: SignedAssociations) -> aiohttp.ClientResponse:
         """
         Pushes the given associations to the peer.
 
         :param sgAssocs: The associations to push.
 
-        :return: A deferred which results in the response to the push request.
+        :return: The response to the push request.
         """
         body = {"sgAssocs": sgAssocs}
 
-        reqDeferred = self.sydent.replicationHttpsClient.postJson(
+        response = await self.sydent.replicationHttpsClient.postJson(
             self.replication_url, body
         )
-        if reqDeferred is None:
+        if response is None:
             raise RuntimeError(f"Unable to push sgAssocs to {self.replication_url}")
 
-        # XXX: We'll also need to prune the deleted associations out of the
-        # local associations table once they've been replicated to all peers
-        # (ie. remove the record we kept in order to propagate the deletion to
-        # other peers).
+        if response.status >= 200 and response.status < 300:
+            return response
 
-        updateDeferred: Deferred[IResponse] = defer.Deferred()
-
-        reqDeferred.addCallback(self._pushSuccess, updateDeferred=updateDeferred)
-        reqDeferred.addErrback(self._pushFailed, updateDeferred=updateDeferred)  # type: ignore[call-overload]
-
-        return updateDeferred
-
-    def _pushSuccess(
-        self,
-        result: "IResponse",
-        updateDeferred: "Deferred[IResponse]",
-    ) -> None:
-        """
-        Processes a successful push request. If the request resulted in a status code
-        that's not a success, consider it a failure
-
-        :param result: The HTTP response.
-        :param updateDeferred: The deferred to make either succeed or fail depending on
-            the status code.
-        """
-        if result.code >= 200 and result.code < 300:
-            updateDeferred.callback(result)
-        else:
-            d = readBody(result)
-            d.addCallback(self._failedPushBodyRead, updateDeferred=updateDeferred)
-            d.addErrback(self._pushFailed, updateDeferred=updateDeferred)  # type: ignore[call-overload]
-
-    def _failedPushBodyRead(
-        self, body: bytes, updateDeferred: "Deferred[IResponse]"
-    ) -> None:
-        """
-        Processes a response body from a failed push request, then calls the error
-        callback of the provided deferred.
-
-        :param body: The response body.
-        :param updateDeferred: The deferred to call the error callback of.
-        """
-        errObj = json_decoder.decode(body.decode("utf8"))
-        e = RemotePeerError(errObj)
-        updateDeferred.errback(e)
-
-    def _pushFailed(
-        self,
-        failure: Failure,
-        updateDeferred: "Deferred[object]",
-    ) -> None:
-        """
-        Processes a failed push request, by calling the error callback of the given
-        deferred with it.
-
-        :param failure: The failure to process.
-        :param updateDeferred: The deferred to call the error callback of.
-        """
-        updateDeferred.errback(failure)
-        return None
+        # Non-success status: read the body for error details
+        resp_body = await response.read()
+        try:
+            errObj = json_decoder.decode(resp_body.decode("utf8"))
+            raise RemotePeerError(errObj)
+        except (ValueError, UnicodeDecodeError):
+            raise Exception(
+                "Push to %s failed with status %d"
+                % (self.replication_url, response.status)
+            )
 
 
 class NoSignaturesException(Exception):
