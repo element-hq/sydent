@@ -80,7 +80,7 @@ class LookupV2Servlet(SydentResource):
             request.setResponseCode(400)
             return {
                 "errcode": "M_TOO_LARGE",
-                "error": "More than the maximum amount of " "addresses provided",
+                "error": "More than the maximum amount of addresses provided",
             }
 
         pepper = str(args["pepper"])

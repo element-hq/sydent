@@ -67,8 +67,7 @@ class HashingMetadataStore:
 
         # Create or update lookup_pepper
         sql = (
-            "INSERT OR REPLACE INTO hashing_metadata (id, lookup_pepper) "
-            "VALUES (0, ?)"
+            "INSERT OR REPLACE INTO hashing_metadata (id, lookup_pepper) VALUES (0, ?)"
         )
         cur.execute(sql, (pepper,))
 
