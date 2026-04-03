@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING, cast
 import attr
 import signedjson.key
 import signedjson.sign
+from aiohttp import web
 from signedjson.sign import SignatureVerifyException
-from twisted.web.server import Request
 from unpaddedbase64 import decode_base64
 
 from sydent.hs_federation.types import (
@@ -180,7 +180,9 @@ class Verifier:
         )
         raise SignatureVerifyException("No matching signature found")
 
-    async def authenticate_request(self, request: "Request", content: JsonDict) -> str:
+    async def authenticate_request(
+        self, request: web.Request, content: JsonDict
+    ) -> str:
         """Authenticates a Matrix federation request based on the X-Matrix header
         XXX: Copied largely from synapse
 
@@ -189,7 +191,7 @@ class Verifier:
 
         :return: The origin of the server whose signature was validated
         """
-        auth_headers = request.requestHeaders.getRawHeaders("Authorization")
+        auth_headers = request.headers.getall("Authorization", [])
         if not auth_headers:
             raise NoAuthenticationError("Missing Authorization headers")
 
@@ -210,7 +212,7 @@ class Verifier:
 
         json_request = SignedMatrixRequest(
             method=request.method,
-            uri=request.uri,
+            uri=str(request.url.relative()),
             destination_is=self.sydent.config.general.server_name,
             signatures=signatures,
             origin=origin,

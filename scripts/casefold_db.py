@@ -26,8 +26,6 @@ from sydent.util import json_decoder
 from sydent.util.emailutils import EmailSendException, sendEmail
 from sydent.util.hash import sha256_and_url_safe_base64
 
-from tests.utils import ResolvingMemoryReactorClock
-
 logger = logging.getLogger("casefold_db")
 
 # Maximum number of attempts to send an email.
@@ -416,8 +414,7 @@ if __name__ == "__main__":
     sydent_config = SydentConfig()
     sydent_config.parse_config_file(args.config_path)
 
-    reactor = ResolvingMemoryReactorClock()
-    sydent = Sydent(sydent_config, reactor, False)
+    sydent = Sydent(sydent_config, use_tls_for_federation=False)
 
     update_global_associations(sydent, sydent.db, dry_run=args.dry_run)
     update_local_associations(

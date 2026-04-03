@@ -7,12 +7,10 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-import copy
 import json
 import logging
 from collections.abc import Iterable
 from typing import Any
-from urllib.parse import parse_qs
 
 from aiohttp import web
 from prometheus_client import Counter
@@ -32,8 +30,8 @@ request_counter = Counter(
 
 class MatrixRestError(Exception):
     """
-    Handled by the jsonwrap middleware. Any handlers that don't use this
-    should catch this exception themselves.
+    Handled by the error-handling middleware. Any handlers that don't use
+    the middleware should catch this exception themselves.
     """
 
     def __init__(self, httpStatus: int, errcode: str, error: str):
@@ -41,6 +39,15 @@ class MatrixRestError(Exception):
         self.httpStatus = httpStatus
         self.errcode = errcode
         self.error = error
+
+
+def json_response(content: JsonDict, status: int = 200) -> web.Response:
+    """Create a JSON response from a dict."""
+    return web.Response(
+        body=json.dumps(content).encode("UTF-8"),
+        status=status,
+        content_type="application/json",
+    )
 
 
 async def get_args(
@@ -51,7 +58,7 @@ async def get_args(
     Currently takes args from the top level keys of a json object or
     www-form-urlencoded for backwards compatibility on v1 endpoints only.
 
-    :param request: The aiohttp request.
+    :param request: The request received by the handler.
     :param args: The args to look for in the request's parameters.
     :param required: Whether to raise a MatrixRestError with 400
         M_MISSING_PARAMS if an argument is not found.
@@ -59,11 +66,14 @@ async def get_args(
     :raises: MatrixRestError if required is True and a given parameter
         was not found in the request's query parameters.
     :raises: MatrixRestError if the request body contains bad JSON.
+    :raises: MatrixRestError if arguments are given in www-form-urlencoded
+        form, and some argument name or value is not a valid UTF-8-encoded
+        string.
 
-    :return: A dict containing the requested args and their values.
+    :return: A dict containing the requested args and their values. String values
+        are of type unicode.
     """
-    path = request.path
-    v1_path = path.startswith("/_matrix/identity/api/v1")
+    v1_path = request.path.startswith("/_matrix/identity/api/v1")
 
     request_args = None
     # for v1 paths, only look for json args if content type is json
@@ -77,8 +87,8 @@ async def get_args(
         try:
             body = await request.read()
             request_args = json_decoder.decode(body.decode("UTF-8"))
-        except ValueError as e:
-            raise MatrixRestError(400, "M_BAD_JSON", "Malformed JSON") from e
+        except ValueError:
+            raise MatrixRestError(400, "M_BAD_JSON", "Malformed JSON")
 
     # If we didn't get anything from that, and it's a v1 api path, try the request args
     if request_args is None and (v1_path or request.method == "GET"):
@@ -90,20 +100,17 @@ async def get_args(
         request_args = {}
 
     if required:
-        missing = [a for a in args if a not in request_args]
+        # Check for any missing arguments
+        missing = []
+        for a in args:
+            if a not in request_args:
+                missing.append(a)
+
         if len(missing) > 0:
             msg = "Missing parameters: " + (",".join(missing))
             raise MatrixRestError(400, "M_MISSING_PARAMS", msg)
 
     return request_args
-
-
-def send_cors(response: web.StreamResponse) -> None:
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = (
-        "GET, POST, PUT, DELETE, OPTIONS"
-    )
-    response.headers["Access-Control-Allow-Headers"] = "*"
 
 
 def dict_to_json_bytes(content: JsonDict) -> bytes:
@@ -115,23 +122,10 @@ def dict_to_json_bytes(content: JsonDict) -> bytes:
     return json.dumps(content).encode("UTF-8")
 
 
-def json_response(content: JsonDict, status: int = 200) -> web.Response:
-    """Build a JSON response with CORS headers."""
-    resp = web.Response(
-        body=dict_to_json_bytes(content),
-        status=status,
-        content_type="application/json",
-    )
-    send_cors(resp)
-    return resp
-
-
-def error_response(exc: MatrixRestError) -> web.Response:
-    """Build a JSON error response from a MatrixRestError."""
-    return json_response(
-        {"errcode": exc.errcode, "error": exc.error},
-        status=exc.httpStatus,
-    )
+def send_cors(response: web.StreamResponse) -> None:
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
 
 
 @web.middleware
@@ -143,7 +137,10 @@ async def matrix_error_middleware(
     try:
         return await handler(request)
     except MatrixRestError as e:
-        return error_response(e)
+        return json_response(
+            {"errcode": e.errcode, "error": e.error},
+            status=e.httpStatus,
+        )
     except web.HTTPException:
         raise
     except Exception:
@@ -176,7 +173,6 @@ async def metrics_middleware(
     handler: Any,
 ) -> web.StreamResponse:
     """Middleware that counts requests per handler."""
-    # Use the handler name or the route resource name
     name = getattr(handler, "__name__", handler.__class__.__name__)
     request_counter.labels(name, request.method).inc()
     return await handler(request)

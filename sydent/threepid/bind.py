@@ -7,13 +7,13 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
+import asyncio
 import collections
 import logging
 import math
 from typing import TYPE_CHECKING, Any
 
 import signedjson.sign
-from twisted.internet import defer
 
 from sydent.db.hashing_metadata import HashingMetadataStore
 from sydent.db.invite_tokens import JoinTokenStore
@@ -110,7 +110,7 @@ class ThreepidBinder:
         signer = Signer(self.sydent)
         sgassoc = signer.signedThreePidAssociation(assoc)
 
-        defer.ensureDeferred(self._notify(sgassoc, 0))
+        asyncio.create_task(self._notify(sgassoc, 0))
 
         return sgassoc
 
@@ -169,11 +169,11 @@ class ThreepidBinder:
             return
 
         # If the request failed, try again with exponential backoff
-        if response.code != 200:
+        if response.status != 200:
             self._notifyErrback(
                 assoc,
                 attempt,
-                f"Non-OK error code received ({response.code:d})",
+                f"Non-OK error code received ({response.status:d})",
             )
         else:
             logger.info("Successfully notified on bind for %s", mxid)
@@ -210,9 +210,12 @@ class ThreepidBinder:
         logger.warning(
             "Error notifying on bind for %s: %s - rescheduling", assoc["mxid"], error
         )
-        self.sydent.reactor.callLater(
-            math.pow(2, attempt), defer.ensureDeferred, self._notify(assoc, attempt + 1)
-        )
+
+        async def _retry() -> None:
+            await asyncio.sleep(math.pow(2, attempt))
+            await self._notify(assoc, attempt + 1)
+
+        asyncio.create_task(_retry())
 
     # The below is lovingly ripped off of synapse/http/endpoint.py
 

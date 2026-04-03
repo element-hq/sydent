@@ -10,7 +10,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-from twisted.web.server import Request
+from aiohttp import web
 
 from sydent.db.accounts import AccountStore
 from sydent.http.servlets import MatrixRestError, get_args
@@ -23,8 +23,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def tokenFromRequest(request: Request) -> str | None:
-    """Extract token from header of query parameter.
+async def tokenFromRequest(request: web.Request) -> str | None:
+    """Extract token from header or query parameter.
 
     :param request: The request to look for an access token in.
 
@@ -32,21 +32,21 @@ def tokenFromRequest(request: Request) -> str | None:
     """
     token = None
     # check for Authorization header first
-    authHeader = request.getHeader("Authorization")
+    authHeader = request.headers.get("Authorization")
     if authHeader is not None and authHeader.startswith("Bearer "):
         token = authHeader[len("Bearer ") :]
 
     # no? try access_token query param
     if token is None:
-        args = get_args(request, ("access_token",), required=False)
+        args = await get_args(request, ("access_token",), required=False)
         token = args.get("access_token")
 
     return token
 
 
-def authV2(
+async def authV2(
     sydent: "Sydent",
-    request: Request,
+    request: web.Request,
     requireTermsAgreed: bool = True,
 ) -> "Account":
     """For v2 APIs check that the request has a valid access token associated with it
@@ -60,7 +60,7 @@ def authV2(
     :raises MatrixRestError: If the request is v2 but could not be authed or the user has
         not accepted terms.
     """
-    token = tokenFromRequest(request)
+    token = await tokenFromRequest(request)
 
     if token is None:
         raise MatrixRestError(401, "M_UNAUTHORIZED", "Unauthorized")

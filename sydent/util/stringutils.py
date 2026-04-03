@@ -7,9 +7,8 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
+import ipaddress
 import re
-
-from twisted.internet.abstract import isIPAddress, isIPv6Address
 
 # https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-client-r0-register-email-requesttoken
 CLIENT_SECRET_REGEX = re.compile(r"^[0-9a-zA-Z\.=_\-]+$")
@@ -114,10 +113,19 @@ def is_valid_matrix_server_name(string: str) -> bool:
     except ValueError:
         return False
 
-    valid_ipv4_addr = isIPAddress(host)
-    valid_ipv6_literal = (
-        host[0] == "[" and host[-1] == "]" and isIPv6Address(host[1:-1])
-    )
+    try:
+        ipaddress.IPv4Address(host)
+        valid_ipv4_addr = True
+    except ValueError:
+        valid_ipv4_addr = False
+
+    valid_ipv6_literal = False
+    if host.startswith("[") and host.endswith("]"):
+        try:
+            ipaddress.IPv6Address(host[1:-1])
+            valid_ipv6_literal = True
+        except ValueError:
+            pass
 
     return valid_ipv4_addr or valid_ipv6_literal or is_valid_hostname(host)
 
