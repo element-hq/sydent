@@ -30,7 +30,7 @@ class AuthTestCase(unittest.TestCase):
             ("@bob:localhost", 101010101, "asd"),
         )
         cur.execute(
-            "INSERT INTO tokens (user_id, token)" "VALUES (?, ?)",
+            "INSERT INTO tokens (user_id, token)VALUES (?, ?)",
             ("@bob:localhost", self.test_token),
         )
 
