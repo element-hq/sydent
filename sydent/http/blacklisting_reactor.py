@@ -68,7 +68,7 @@ class _IPBlacklistingResolver:
     def resolveHostName(
         self, recv: IResolutionReceiver, hostname: str, portNumber: int = 0
     ) -> IResolutionReceiver:
-        addresses = []  # type: List[IAddress]
+        addresses: List[IAddress] = []
 
         def _callback() -> None:
             has_bad_ip = False

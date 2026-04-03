@@ -272,7 +272,7 @@ def setup_logging(config: SydentConfig) -> None:
     log_path = config.general.log_path
     log_level = config.general.log_level
 
-    log_format = "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s" " - %(message)s"
+    log_format = "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s"
     formatter = logging.Formatter(log_format)
 
     handler: logging.Handler

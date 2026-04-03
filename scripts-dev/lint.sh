@@ -5,7 +5,6 @@ set -ex
 # (or explicit configuration in pyproject.toml). This helps to keep this script
 # consistent with CI.
 
-black .
-ruff check .
-isort .
+ruff check --fix .
+ruff format .
 mypy
