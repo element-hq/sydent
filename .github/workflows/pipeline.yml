@@ -33,10 +33,10 @@ jobs:
       - uses: astral-sh/setup-uv@v5
 
       - name: Lint (ruff)
-        run: uv run ruff check sydent/ tests/ stubs/ integration-tests/
+        run: uv run ruff check sydent/ tests/ integration-tests/
 
       - name: Format (ruff)
-        run: uv run ruff format --check sydent/ tests/ stubs/ integration-tests/
+        run: uv run ruff format --check sydent/ tests/ integration-tests/
 
       - name: Restore/persist mypy's cache
         uses: actions/cache@v5
