@@ -9,16 +9,13 @@
 
 import json
 import logging
-from io import BytesIO
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from twisted.web.client import Agent, FileBodyProducer
-from twisted.web.http_headers import Headers
-from twisted.web.iweb import IAgent, IResponse
+import aiohttp
 
-from sydent.http.blacklisting_reactor import BlacklistingReactorWrapper
+from sydent.http.blacklisting_reactor import BlacklistingResolver
 from sydent.http.federation_tls_options import ClientTLSOptionsFactory
-from sydent.http.httpcommon import read_body_with_max_size
+from sydent.http.httpcommon import BodyExceededMaxSize, read_body_with_max_size
 from sydent.http.matrixfederationagent import MatrixFederationAgent
 from sydent.types import JsonDict
 from sydent.util import json_decoder
@@ -29,58 +26,46 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-AgentType = TypeVar("AgentType", bound=IAgent)
+class HTTPClient:
+    """A base HTTP client using aiohttp.ClientSession."""
 
-
-class HTTPClient(Generic[AgentType]):
-    """A base HTTP class that contains methods for making GET and POST HTTP
-    requests.
-    """
-
-    agent: AgentType
+    session: aiohttp.ClientSession
 
     async def get_json(self, uri: str, max_size: int | None = None) -> JsonDict:
-        """Make a GET request to an endpoint returning JSON and parse result
+        """Make a GET request to an endpoint returning JSON and parse result.
 
         :param uri: The URI to make a GET request to.
-
         :param max_size: The maximum size (in bytes) to allow as a response.
 
-        :return: A deferred containing JSON parsed into a Python object.
+        :return: Parsed JSON as a Python dict.
         """
         logger.debug("HTTP GET %s", uri)
 
-        response = await self.agent.request(
-            b"GET",
-            uri.encode("utf8"),
-        )
-        body = await read_body_with_max_size(response, max_size)
-        try:
-            # json.loads doesn't allow bytes in Python 3.5
-            json_body = json_decoder.decode(body.decode("UTF-8"))
-        except Exception:
-            logger.warning("Error parsing JSON from %s", uri)
-            raise
-        if not isinstance(json_body, dict):
-            raise TypeError
-        # Cast safety: json only permits strings as object keys, so `json_body`
-        # must be Dict[str, Any] rather than Dict[Any, Any].
-        return cast(JsonDict, json_body)
+        async with self.session.get(uri) as response:
+            body = await response.read()
+            if max_size is not None and len(body) > max_size:
+                raise BodyExceededMaxSize()
+            try:
+                json_body = json_decoder.decode(body.decode("UTF-8"))
+            except Exception:
+                logger.warning("Error parsing JSON from %s", uri)
+                raise
+            if not isinstance(json_body, dict):
+                raise TypeError
+            return cast(JsonDict, json_body)
 
     async def post_json_get_nothing(
         self, uri: str, post_json: JsonDict, opts: dict[str, Any]
-    ) -> IResponse:
-        """Make a POST request to an endpoint returning nothing
+    ) -> aiohttp.ClientResponse:
+        """Make a POST request to an endpoint returning nothing.
 
         :param uri: The URI to make a POST request to.
-
         :param post_json: A Python object that will be converted to a JSON
             string and POSTed to the given URI.
-
-        :param opts: A dictionary of request options. Currently only opts.headers
+        :param opts: A dictionary of request options. Currently only opts["headers"]
             is supported.
 
-        :return: a response from the remote server.
+        :return: A response from the remote server.
         """
         resp, _ = await self.post_json_maybe_get_json(uri, post_json, opts)
         return resp
@@ -91,100 +76,168 @@ class HTTPClient(Generic[AgentType]):
         post_json: dict[str, Any],
         opts: dict[str, Any],
         max_size: int | None = None,
-    ) -> tuple[IResponse, JsonDict | None]:
-        """Make a POST request to an endpoint that might be returning JSON and parse
-        result
+    ) -> tuple[aiohttp.ClientResponse, JsonDict | None]:
+        """Make a POST request to an endpoint that might return JSON and parse
+        the result.
 
         :param uri: The URI to make a POST request to.
-
         :param post_json: A Python object that will be converted to a JSON
             string and POSTed to the given URI.
-
-        :param opts: A dictionary of request options. Currently only opts.headers
+        :param opts: A dictionary of request options. Currently only opts["headers"]
             is supported.
-
         :param max_size: The maximum size (in bytes) to allow as a response.
 
-        :return: a response from the remote server, and its decoded JSON body if any (None
-            otherwise).
+        :return: A tuple of (response, parsed JSON body or None).
         """
         json_bytes = json.dumps(post_json).encode("utf8")
 
         headers = opts.get(
             "headers",
-            Headers(
-                {
-                    b"Content-Type": [b"application/json"],
-                }
-            ),
+            {"Content-Type": "application/json"},
         )
 
         logger.debug("HTTP POST %s -> %s", json_bytes, uri)
 
-        response = await self.agent.request(
-            b"POST",
-            uri.encode("utf8"),
-            headers,
-            bodyProducer=FileBodyProducer(BytesIO(json_bytes)),
-        )
+        async with self.session.post(uri, data=json_bytes, headers=headers) as response:
+            # Read everything inside the context manager so the response
+            # remains usable after it exits.
+            json_body = None
+            try:
+                body = await response.read()
+                if max_size is not None and len(body) > max_size:
+                    raise BodyExceededMaxSize()
+                json_body = json_decoder.decode(body.decode("UTF-8"))
+            except Exception:
+                # We might get an exception because the body exceeds
+                # max_size, or it isn't valid JSON. In both cases we don't
+                # care.
+                pass
 
-        # Ensure the body object is read otherwise we'll leak HTTP connections
-        # as per
-        # https://twistedmatrix.com/documents/current/web/howto/client.html
-        json_body = None
-        try:
-            # TODO Will this cause the server to think the request was a failure?
-            body = await read_body_with_max_size(response, max_size)
-            json_body = json_decoder.decode(body.decode("UTF-8"))
-        except Exception:
-            # We might get an exception here because the body exceeds the max_size, or it
-            # isn't valid JSON. In both cases, we don't care about it.
-            pass
-
-        return response, json_body
+            return response, json_body
 
 
-class SimpleHttpClient(HTTPClient[Agent]):
+class SimpleHttpClient(HTTPClient):
     """A simple, no-frills HTTP client based on the class of the same name
     from Synapse.
     """
 
     def __init__(self, sydent: "Sydent") -> None:
         self.sydent = sydent
-        # The default endpoint factory in Twisted 14.0.0 (which we require) uses the
-        # BrowserLikePolicyForHTTPS context factory which will do regular cert validation
-        # 'like a browser'
-        self.agent = Agent(
-            BlacklistingReactorWrapper(
-                reactor=self.sydent.reactor,
-                ip_whitelist=sydent.config.general.ip_whitelist,
-                ip_blacklist=sydent.config.general.ip_blacklist,
-            ),
-            connectTimeout=15,
-        )
+        self._session: aiohttp.ClientSession | None = None
+
+    @property
+    def session(self) -> aiohttp.ClientSession:
+        if self._session is None or self._session.closed:
+            resolver = BlacklistingResolver(
+                ip_whitelist=self.sydent.config.general.ip_whitelist,
+                ip_blacklist=self.sydent.config.general.ip_blacklist,
+            )
+            connector = aiohttp.TCPConnector(resolver=resolver)
+            self._session = aiohttp.ClientSession(
+                connector=connector,
+                timeout=aiohttp.ClientTimeout(connect=15),
+            )
+        return self._session
+
+    async def close(self) -> None:
+        if self._session is not None and not self._session.closed:
+            await self._session.close()
 
 
-class FederationHttpClient(HTTPClient[MatrixFederationAgent]):
+class FederationHttpClient(HTTPClient):
     """HTTP client for federation requests to homeservers. Uses a
     MatrixFederationAgent.
     """
 
     def __init__(self, sydent: "Sydent") -> None:
         self.sydent = sydent
-        self.agent = MatrixFederationAgent(
-            # Type-safety: I don't have a good way of expressing that
-            # the reactor is IReactorTCP, IReactorTime and
-            # IReactorPluggableNameResolver all at once. But it is, because
-            # it wraps the sydent reactor.
-            # TODO: can we introduce a SydentReactor type like SynapseReactor?
-            BlacklistingReactorWrapper(  # type: ignore[arg-type]
-                reactor=self.sydent.reactor,
-                ip_whitelist=sydent.config.general.ip_whitelist,
-                ip_blacklist=sydent.config.general.ip_blacklist,
-            ),
-            (
-                ClientTLSOptionsFactory(sydent.config.http.verify_federation_certs)
-                if sydent.use_tls_for_federation
+        self._session: aiohttp.ClientSession | None = None
+        self._agent: MatrixFederationAgent | None = None
+
+    def _ensure_session(self) -> aiohttp.ClientSession:
+        if self._session is None or self._session.closed:
+            resolver = BlacklistingResolver(
+                ip_whitelist=self.sydent.config.general.ip_whitelist,
+                ip_blacklist=self.sydent.config.general.ip_blacklist,
+            )
+            connector = aiohttp.TCPConnector(resolver=resolver)
+            self._session = aiohttp.ClientSession(connector=connector)
+
+            tls_factory = (
+                ClientTLSOptionsFactory(self.sydent.config.http.verify_federation_certs)
+                if self.sydent.use_tls_for_federation
                 else None
-            ),
+            )
+
+            self._agent = MatrixFederationAgent(
+                session=self._session,
+                tls_client_options_factory=tls_factory,
+            )
+        return self._session
+
+    @property
+    def session(self) -> aiohttp.ClientSession:
+        return self._ensure_session()
+
+    @property
+    def agent(self) -> MatrixFederationAgent:
+        self._ensure_session()
+        assert self._agent is not None
+        return self._agent
+
+    async def close(self) -> None:
+        if self._session is not None and not self._session.closed:
+            await self._session.close()
+
+    async def get_json(self, uri: str, max_size: int | None = None) -> JsonDict:
+        """Make a GET request via the federation agent."""
+        logger.debug("HTTP GET %s", uri)
+
+        response = await self.agent.request("GET", uri)
+        try:
+            body = await read_body_with_max_size(response, max_size)
+            json_body = json_decoder.decode(body.decode("UTF-8"))
+        except Exception:
+            logger.warning("Error parsing JSON from %s", uri)
+            raise
+        if not isinstance(json_body, dict):
+            raise TypeError
+        return cast(JsonDict, json_body)
+
+    async def post_json_get_nothing(
+        self, uri: str, post_json: JsonDict, opts: dict[str, Any]
+    ) -> aiohttp.ClientResponse:
+        resp, _ = await self.post_json_maybe_get_json(uri, post_json, opts)
+        return resp
+
+    async def post_json_maybe_get_json(
+        self,
+        uri: str,
+        post_json: dict[str, Any],
+        opts: dict[str, Any],
+        max_size: int | None = None,
+    ) -> tuple[aiohttp.ClientResponse, JsonDict | None]:
+        json_bytes = json.dumps(post_json).encode("utf8")
+
+        headers = opts.get(
+            "headers",
+            {"Content-Type": "application/json"},
         )
+
+        logger.debug("HTTP POST %s -> %s", json_bytes, uri)
+
+        response = await self.agent.request(
+            "POST",
+            uri,
+            headers=headers,
+            body=json_bytes,
+        )
+
+        json_body = None
+        try:
+            body = await read_body_with_max_size(response, max_size)
+            json_body = json_decoder.decode(body.decode("UTF-8"))
+        except Exception:
+            pass
+
+        return response, json_body
