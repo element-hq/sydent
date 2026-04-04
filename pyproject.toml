@@ -45,7 +45,7 @@ dev = [
     "black>=23.1.0",
     "ruff==0.0.189",
     "isort==5.8.0",
-    "matrix-is-tester @ git+https://github.com/matrix-org/matrix-is-tester@main",
+    "matrix-is-tester",
     "mypy>=0.902",
     "mypy-zope>=0.3.1",
     "parameterized==0.8.1",
@@ -56,6 +56,12 @@ dev = [
     "types-PyYAML==6.0.3",
     "towncrier>=21.9.0",
 ]
+
+[tool.uv.workspace]
+members = ["integration-tests"]
+
+[tool.uv.sources]
+matrix-is-tester = { workspace = true }
 
 [tool.uv.build-backend]
 module-name = "sydent"
@@ -99,6 +105,7 @@ showcontent = true
 
 [tool.isort]
 profile = "black"
+known_local_folder = ["tests", "matrix_is_tester"]
 
 [tool.black]
 target-version = ['py310']

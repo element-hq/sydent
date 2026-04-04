@@ -14,6 +14,7 @@ from unittest.mock import Mock, patch
 from twisted.trial import unittest
 
 from sydent.util.emailutils import sendEmail
+
 from tests.utils import make_sydent
 
 

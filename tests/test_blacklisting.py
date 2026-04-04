@@ -16,6 +16,7 @@ from twisted.web.client import Agent
 
 from sydent.http.blacklisting_reactor import BlacklistingReactorWrapper
 from sydent.http.srvresolver import Server
+
 from tests.utils import AsyncMock, make_request, make_sydent
 
 

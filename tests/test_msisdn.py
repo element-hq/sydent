@@ -14,6 +14,7 @@ import attr
 from twisted.trial import unittest
 
 from sydent.types import JsonDict
+
 from tests.utils import make_request, make_sydent
 
 

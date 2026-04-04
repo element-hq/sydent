@@ -2,6 +2,34 @@ version = 1
 revision = 3
 requires-python = ">=3.10, <4"
 
+[manifest]
+members = [
+    "matrix-is-tester",
+    "matrix-sydent",
+]
+
+[[package]]
+name = "aiosmtpd"
+version = "1.4.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "atpublic" },
+    { name = "attrs" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/ca/b2b7cc880403ef24be77383edaadfcf0098f5d7b9ddbf3e2c17ef0a6af0d/aiosmtpd-1.4.6.tar.gz", hash = "sha256:5a811826e1a5a06c25ebc3e6c4a704613eb9a1bcf6b78428fbe865f4f6c9a4b8", size = 152775, upload-time = "2024-05-18T11:37:50.029Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/39/d401756df60a8344848477d54fdf4ce0f50531f6149f3b8eaae9c06ae3dc/aiosmtpd-1.4.6-py3-none-any.whl", hash = "sha256:72c99179ba5aa9ae0abbda6994668239b64a5ce054471955fe75f581d2592475", size = 154263, upload-time = "2024-05-18T11:37:47.877Z" },
+]
+
+[[package]]
+name = "atpublic"
+version = "7.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/05/e2e131a0debaf0f01b8a1b586f5f11713f6affc3e711b406f15f11eafc92/atpublic-7.0.0.tar.gz", hash = "sha256:466ef10d0c8bbd14fd02a5fbd5a8b6af6a846373d91106d3a07c16d72d96b63e", size = 17801, upload-time = "2025-11-29T05:56:45.45Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/96/c0/271f3e1e3502a8decb8ee5c680dbed2d8dc2cd504f5e20f7ed491d5f37e1/atpublic-7.0.0-py3-none-any.whl", hash = "sha256:6702bd9e7245eb4e8220a3e222afcef7f87412154732271ee7deee4433b72b4b", size = 6421, upload-time = "2025-11-29T05:56:44.604Z" },
+]
+
 [[package]]
 name = "attrs"
 version = "26.1.0"
@@ -610,12 +638,17 @@ wheels = [
 
 [[package]]
 name = "matrix-is-tester"
-version = "0.1"
-source = { git = "https://github.com/matrix-org/matrix-is-tester?rev=main#cfc3bf0b998c5d0ae91d0f2f4f6cb007a18833aa" }
+version = "0.1.0"
+source = { editable = "integration-tests" }
 dependencies = [
+    { name = "aiosmtpd" },
     { name = "requests" },
-    { name = "six" },
-    { name = "twisted" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiosmtpd", specifier = ">=1.4" },
+    { name = "requests", specifier = ">=2.22.0" },
 ]
 
 [[package]]
@@ -691,7 +724,7 @@ provides-extras = ["sentry", "prometheus"]
 dev = [
     { name = "black", specifier = ">=23.1.0" },
     { name = "isort", specifier = "==5.8.0" },
-    { name = "matrix-is-tester", git = "https://github.com/matrix-org/matrix-is-tester?rev=main" },
+    { name = "matrix-is-tester", editable = "integration-tests" },
     { name = "mypy", specifier = ">=0.902" },
     { name = "mypy-zope", specifier = ">=0.3.1" },
     { name = "parameterized", specifier = "==0.8.1" },
@@ -1095,15 +1128,6 @@ dependencies = [
     { name = "unpaddedbase64" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/dc/f2/2b3c5574ab77e086597cdc85781fa1d2ef1b4e55bd53d47308bbd2ad7596/signedjson-1.1.1.tar.gz", hash = "sha256:350586e7570ba208f7729dcda09d43f554ead0207a15e3e3695533ef3f720009", size = 10906, upload-time = "2020-03-27T19:49:12.654Z" }
-
-[[package]]
-name = "six"
-version = "1.17.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
-]
 
 [[package]]
 name = "sortedcontainers"

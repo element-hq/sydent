@@ -25,6 +25,7 @@ from sydent.sydent import Sydent
 from sydent.util import json_decoder
 from sydent.util.emailutils import EmailSendException, sendEmail
 from sydent.util.hash import sha256_and_url_safe_base64
+
 from tests.utils import ResolvingMemoryReactorClock
 
 logger = logging.getLogger("casefold_db")
