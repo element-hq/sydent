@@ -43,7 +43,7 @@ class BaseApiTest(object):
 
     def test_ping(self):
         body = self.api.ping()
-        self.assertEquals(body, {})
+        self.assertEqual(body, {})
 
     def test_request_email_code(self):
         body = self.api.request_email_code("fakeemail1@nowhere.test", "sekrit", 1)
@@ -55,7 +55,7 @@ class BaseApiTest(object):
         body = self.api.request_email_code(
             "fakeemail1@nowhere.test@elsewhere.test", "sekrit", 1
         )
-        self.assertEquals(body["errcode"], "M_INVALID_EMAIL")
+        self.assertEqual(body["errcode"], "M_INVALID_EMAIL")
 
     def test_submit_email_code(self):
         self.api.request_and_submit_email_code("fakeemail2@nowhere.test")
@@ -69,12 +69,12 @@ class BaseApiTest(object):
         token = self.api.get_token_from_mail()
 
         body = self.api.submit_email_token_via_get(sid, "verysekrit", token)
-        self.assertEquals(body, b"matrix_is_tester:email_submit_get_response\n")
+        self.assertEqual(body, b"matrix_is_tester:email_submit_get_response\n")
 
         body = self.api.get_validated_threepid(sid, "verysekrit")
 
-        self.assertEquals(body["medium"], "email")
-        self.assertEquals(body["address"], "steve@nowhere.test")
+        self.assertEqual(body["medium"], "email")
+        self.assertEqual(body["address"], "steve@nowhere.test")
 
     def test_unverified_bind(self):
         req_code_body = self.api.request_email_code(
@@ -85,15 +85,15 @@ class BaseApiTest(object):
         body = self.api.bind_email(
             req_code_body["sid"], "sekrit", "@commonapitests:127.0.0.1:4490"
         )
-        self.assertEquals(body["errcode"], "M_SESSION_NOT_VALIDATED")
+        self.assertEqual(body["errcode"], "M_SESSION_NOT_VALIDATED")
 
     def test_get_validated_threepid(self):
         params = self.api.request_and_submit_email_code("fakeemail4@nowhere.test")
 
         body = self.api.get_validated_threepid(params["sid"], params["client_secret"])
 
-        self.assertEquals(body["medium"], "email")
-        self.assertEquals(body["address"], "fakeemail4@nowhere.test")
+        self.assertEqual(body["medium"], "email")
+        self.assertEqual(body["address"], "fakeemail4@nowhere.test")
 
     def test_get_validated_threepid_not_validated(self):
         req_code_body = self.api.request_email_code(
@@ -104,7 +104,7 @@ class BaseApiTest(object):
         self.mailSink.get_mail()
 
         get_val_body = self.api.get_validated_threepid(req_code_body["sid"], "sekrit")
-        self.assertEquals(get_val_body["errcode"], "M_SESSION_NOT_VALIDATED")
+        self.assertEqual(get_val_body["errcode"], "M_SESSION_NOT_VALIDATED")
 
     def test_store_invite(self):
         body = self.api.store_invite(
@@ -134,14 +134,12 @@ class BaseApiTest(object):
         mail = self.mailSink.get_mail()
         log.msg("Got email (invite): %r" % (mail,))
         mail_object = json.loads(mail["data"])
-        self.assertEquals(mail_object["token"], body["token"])
-        self.assertEquals(mail_object["room_alias"], "#alias:fake.test")
-        self.assertEquals(mail_object["room_avatar_url"], "mxc://fake.test/roomavatar")
-        self.assertEquals(mail_object["room_name"], "my excellent room")
-        self.assertEquals(mail_object["sender_display_name"], "Ian Sender")
-        self.assertEquals(
-            mail_object["sender_avatar_url"], "mxc://fake.test/iansavatar"
-        )
+        self.assertEqual(mail_object["token"], body["token"])
+        self.assertEqual(mail_object["room_alias"], "#alias:fake.test")
+        self.assertEqual(mail_object["room_avatar_url"], "mxc://fake.test/roomavatar")
+        self.assertEqual(mail_object["room_name"], "my excellent room")
+        self.assertEqual(mail_object["sender_display_name"], "Ian Sender")
+        self.assertEqual(mail_object["sender_avatar_url"], "mxc://fake.test/iansavatar")
 
     def test_store_invite_bound_threepid(self):
         params = self.api.request_and_submit_email_code("already_here@fake.test")
@@ -157,4 +155,4 @@ class BaseApiTest(object):
                 "sender": "@commonapitests:127.0.0.1:4490",
             }
         )
-        self.assertEquals(body["errcode"], "M_THREEPID_IN_USE")
+        self.assertEqual(body["errcode"], "M_THREEPID_IN_USE")

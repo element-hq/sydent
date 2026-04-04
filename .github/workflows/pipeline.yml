@@ -106,11 +106,6 @@ jobs:
         # The oldest supported Python and the newest stable release.
         python-version: ['3.11', '3.15']
         test-dir: ['tests', 'matrix_is_tester']
-        exclude:
-          # matrix-is-tester imports asyncore and smtpd, which Python 3.12
-          # removed.
-          - python-version: '3.15'
-            test-dir: 'matrix_is_tester'
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

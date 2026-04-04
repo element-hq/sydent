@@ -39,9 +39,9 @@ class V2Test(BaseApiTest, unittest.TestCase):
             params["sid"], params["client_secret"], "@commonapitests:127.0.0.1:4490"
         )
 
-        self.assertEquals(body["medium"], "email")
-        self.assertEquals(body["address"], "fakeemail3@nowhere.test")
-        self.assertEquals(body["mxid"], "@commonapitests:127.0.0.1:4490")
+        self.assertEqual(body["medium"], "email")
+        self.assertEqual(body["address"], "fakeemail3@nowhere.test")
+        self.assertEqual(body["mxid"], "@commonapitests:127.0.0.1:4490")
 
         hash_details = self.api.hash_details()
 
@@ -51,7 +51,7 @@ class V2Test(BaseApiTest, unittest.TestCase):
         )
 
         self.assertIn(lookup_str, body2["mappings"])
-        self.assertEquals(
+        self.assertEqual(
             body2["mappings"][lookup_str], "@commonapitests:127.0.0.1:4490"
         )
 
