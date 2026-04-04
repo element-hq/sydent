@@ -8,10 +8,9 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import logging
-from typing import TYPE_CHECKING, Dict, List, Mapping, Optional, Set, Union
+from typing import TYPE_CHECKING, Dict, List, Mapping, Optional, Set, TypedDict, Union
 
 import yaml
-from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
     from sydent.sydent import Sydent

@@ -182,7 +182,9 @@ class FederationHttpClient(HTTPClient[MatrixFederationAgent]):
                 ip_whitelist=sydent.config.general.ip_whitelist,
                 ip_blacklist=sydent.config.general.ip_blacklist,
             ),
-            ClientTLSOptionsFactory(sydent.config.http.verify_federation_certs)
-            if sydent.use_tls_for_federation
-            else None,
+            (
+                ClientTLSOptionsFactory(sydent.config.http.verify_federation_certs)
+                if sydent.use_tls_for_federation
+                else None
+            ),
         )

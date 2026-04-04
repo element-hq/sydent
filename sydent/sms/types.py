@@ -1,6 +1,6 @@
 # See "Request body" section of
 # https://www.openmarket.com/docs/Content/apis/v4http/send-json.htm
-from typing_extensions import Literal, TypedDict
+from typing import Literal, TypedDict
 
 TypeOfNumber = Literal[1, 3, 5]
 
