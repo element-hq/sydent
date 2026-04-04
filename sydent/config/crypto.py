@@ -60,11 +60,7 @@ class CryptoConfig(BaseConfig):
             )
 
         if save_key:
-            signing_key_str = "%s %s %s" % (
-                self.signing_key.alg,
-                self.signing_key.version,
-                signedjson.key.encode_signing_key_base64(self.signing_key),
-            )
+            signing_key_str = f"{self.signing_key.alg} {self.signing_key.version} {signedjson.key.encode_signing_key_base64(self.signing_key)}"
             cfg.set("crypto", "ed25519.signingkey", signing_key_str)
             return True
         else:

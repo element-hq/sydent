@@ -9,8 +9,9 @@
 
 # Actions on the hashing_metadata table which is defined in the migration process in
 # sqlitedb.py
+from collections.abc import Callable
 from sqlite3 import Cursor
-from typing import TYPE_CHECKING, Callable, List, Literal, Optional, Tuple
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from sydent.sydent import Sydent
@@ -19,9 +20,9 @@ if TYPE_CHECKING:
 class HashingMetadataStore:
     def __init__(self, sydent: "Sydent") -> None:
         self.sydent = sydent
-        self._cached_lookup_pepper: Optional[str] = None
+        self._cached_lookup_pepper: str | None = None
 
-    def get_lookup_pepper(self) -> Optional[str]:
+    def get_lookup_pepper(self) -> str | None:
         """Return the value of the current lookup pepper from the db
 
         :return: A pepper if it exists in the database, or None if one does
@@ -39,7 +40,7 @@ class HashingMetadataStore:
         # But I think the application code is such that either
         #  - hashing_metadata contains no rows
         #  - or it contains exactly one row with a nonnull lookup_pepper.
-        row: Optional[Tuple[str]] = res.fetchone()
+        row: tuple[str] | None = res.fetchone()
 
         if not row:
             return None
@@ -107,9 +108,9 @@ class HashingMetadataStore:
 
         # Get count of all 3PID records
         # Medium/address combos are marked as UNIQUE in the database
-        sql = "SELECT COUNT(*) FROM %s" % table
+        sql = f"SELECT COUNT(*) FROM {table}"
         res = cur.execute(sql)
-        row: Tuple[int] = res.fetchone()
+        row: tuple[int] = res.fetchone()
         row_count = row[0]
 
         # Iterate through each medium, address combo, hash it,
@@ -117,13 +118,9 @@ class HashingMetadataStore:
         batch_size = 500
         count = 0
         while count < row_count:
-            sql = "SELECT medium, address FROM %s ORDER BY id LIMIT %s OFFSET %s" % (
-                table,
-                batch_size,
-                count,
-            )
+            sql = f"SELECT medium, address FROM {table} ORDER BY id LIMIT {batch_size} OFFSET {count}"
             res = cur.execute(sql)
-            rows: List[Tuple[str, str]] = res.fetchall()
+            rows: list[tuple[str, str]] = res.fetchall()
 
             for medium, address in rows:
                 # Skip broken db entry
@@ -133,15 +130,15 @@ class HashingMetadataStore:
                 # Combine the medium, address and pepper together in the
                 # following form: "address medium pepper"
                 # According to MSC2134: https://github.com/matrix-org/matrix-doc/pull/2134
-                combo = "%s %s %s" % (address, medium, pepper)
+                combo = f"{address} {medium} {pepper}"
 
                 # Hash the resulting string
                 result = hashing_function(combo)
 
                 # Save the result to the DB
                 sql = (
-                    "UPDATE %s SET lookup_hash = ? "
-                    "WHERE medium = ? AND address = ?" % table
+                    f"UPDATE {table} SET lookup_hash = ? "
+                    "WHERE medium = ? AND address = ?"
                 )
                 # Lines up the query to be executed on commit
                 cur.execute(sql, (result, medium, address))

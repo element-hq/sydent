@@ -9,7 +9,8 @@
 import logging
 import random
 import time
-from typing import Any, Callable, Dict, Generator, Optional, Tuple
+from collections.abc import Callable, Generator
+from typing import Any, Optional
 
 import attr
 from netaddr import IPAddress
@@ -55,7 +56,7 @@ WELL_KNOWN_MAX_CACHE_PERIOD = 48 * 3600
 WELL_KNOWN_MAX_SIZE = 50 * 1024  # 50 KiB
 
 logger = logging.getLogger(__name__)
-well_known_cache: TTLCache[bytes, Optional[bytes]] = TTLCache("well-known")
+well_known_cache: TTLCache[bytes, bytes | None] = TTLCache("well-known")
 
 
 @implementer(IAgent)
@@ -83,10 +84,10 @@ class MatrixFederationAgent:
         # But that's not easy to express with an annotation. We use the
         # `seconds` attribute below, so mark this as IReactorTime for now.
         reactor: IReactorTime,
-        tls_client_options_factory: Optional[ClientTLSOptionsFactory],
-        _well_known_tls_policy: Optional[IPolicyForHTTPS] = None,
-        _srv_resolver: Optional[SrvResolver] = None,
-        _well_known_cache: TTLCache[bytes, Optional[bytes]] = well_known_cache,
+        tls_client_options_factory: ClientTLSOptionsFactory | None,
+        _well_known_tls_policy: IPolicyForHTTPS | None = None,
+        _srv_resolver: SrvResolver | None = None,
+        _well_known_cache: TTLCache[bytes, bytes | None] = well_known_cache,
     ) -> None:
         self._reactor = reactor
 
@@ -310,7 +311,7 @@ class MatrixFederationAgent:
             target_port=port,
         )
 
-    async def _get_well_known(self, server_name: bytes) -> Optional[bytes]:
+    async def _get_well_known(self, server_name: bytes) -> bytes | None:
         """Attempt to fetch and parse a .well-known file for the given server
 
         :param server_name: Name of the server, from the requested url.
@@ -332,7 +333,7 @@ class MatrixFederationAgent:
 
     async def _do_get_well_known(
         self, server_name: bytes
-    ) -> Tuple[Optional[bytes], float]:
+    ) -> tuple[bytes | None, float]:
         """Actually fetch and parse a .well-known, without checking the cache
 
         :param server_name: Name of the server, from the requested url
@@ -345,12 +346,12 @@ class MatrixFederationAgent:
         uri = b"https://%s/.well-known/matrix/server" % (server_name,)
         uri_str = uri.decode("ascii")
         logger.info("Fetching %s", uri_str)
-        cache_period: Optional[float]
+        cache_period: float | None
         try:
             response = await self._well_known_agent.request(b"GET", uri)
             body = await read_body_with_max_size(response, WELL_KNOWN_MAX_SIZE)
             if response.code != 200:
-                raise Exception("Non-200 response %s" % (response.code,))
+                raise Exception(f"Non-200 response {response.code}")
 
             parsed_body = json_decoder.decode(body.decode("utf-8"))
             logger.info("Response from .well-known: %s", parsed_body)
@@ -407,7 +408,7 @@ class LoggingHostnameEndpoint:
 
 def _cache_period_from_headers(
     headers: Headers, time_now: Callable[[], float] = time.time
-) -> Optional[float]:
+) -> float | None:
     cache_controls = _parse_cache_control(headers)
 
     if b"no-store" in cache_controls:
@@ -434,8 +435,8 @@ def _cache_period_from_headers(
     return None
 
 
-def _parse_cache_control(headers: Headers) -> Dict[bytes, Optional[bytes]]:
-    cache_controls: Dict[bytes, Optional[bytes]] = {}
+def _parse_cache_control(headers: Headers) -> dict[bytes, bytes | None]:
+    cache_controls: dict[bytes, bytes | None] = {}
     for hdr in headers.getRawHeaders(b"cache-control", []):
         for directive in hdr.split(b","):
             splits = [x.strip() for x in directive.split(b"=", 1)]

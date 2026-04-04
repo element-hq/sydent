@@ -1,4 +1,5 @@
-from typing import BinaryIO, Optional, Sequence, Type, TypeVar
+from collections.abc import Sequence
+from typing import BinaryIO, TypeVar
 
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IConsumer, IProtocol
@@ -17,9 +18,7 @@ from zope.interface import implementer
 _C = TypeVar("_C")
 
 class ResponseFailed(Exception):
-    def __init__(
-        self, reasons: Sequence[Failure], response: Optional[Response] = ...
-    ): ...
+    def __init__(self, reasons: Sequence[Failure], response: Response | None = ...): ...
 
 class HTTPConnectionPool:
     persistent: bool
@@ -39,23 +38,23 @@ class Agent:
         self,
         reactor: object,
         contextFactory: IPolicyForHTTPS = ...,
-        connectTimeout: Optional[float] = ...,
-        bindAddress: Optional[bytes] = ...,
-        pool: Optional[HTTPConnectionPool] = ...,
+        connectTimeout: float | None = ...,
+        bindAddress: bytes | None = ...,
+        pool: HTTPConnectionPool | None = ...,
     ): ...
     def request(
         self,
         method: bytes,
         uri: bytes,
-        headers: Optional[Headers] = ...,
-        bodyProducer: Optional[IBodyProducer] = ...,
+        headers: Headers | None = ...,
+        bodyProducer: IBodyProducer | None = ...,
     ) -> Deferred[IResponse]: ...
     @classmethod
     def usingEndpointFactory(
-        cls: Type[_C],
+        cls: type[_C],
         reactor: object,
         endpointFactory: IAgentEndpointFactory,
-        pool: Optional[HTTPConnectionPool] = ...,
+        pool: HTTPConnectionPool | None = ...,
     ) -> _C: ...
 
 @implementer(IBodyProducer)
@@ -108,9 +107,7 @@ class URI:
         fragment: bytes,
     ): ...
     @classmethod
-    def fromBytes(
-        cls: Type[_C], uri: bytes, defaultPort: Optional[int] = ...
-    ) -> _C: ...
+    def fromBytes(cls: type[_C], uri: bytes, defaultPort: int | None = ...) -> _C: ...
 
 @implementer(IAgent)
 class RedirectAgent:
@@ -119,6 +116,6 @@ class RedirectAgent:
         self,
         method: bytes,
         uri: bytes,
-        headers: Optional[Headers] = ...,
-        bodyProducer: Optional[IBodyProducer] = ...,
+        headers: Headers | None = ...,
+        bodyProducer: IBodyProducer | None = ...,
     ) -> Deferred[IResponse]: ...

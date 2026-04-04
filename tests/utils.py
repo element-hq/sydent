@@ -2,7 +2,6 @@ import json
 import logging
 import os
 from io import BytesIO
-from typing import Optional
 from unittest.mock import MagicMock
 
 import attr
@@ -53,7 +52,7 @@ tWVEpHfT+G7AjA8=
 """
 
 
-def make_sydent(test_config: Optional[dict] = None) -> Sydent:
+def make_sydent(test_config: dict | None = None) -> Sydent:
     """Create a new sydent
 
     Args:
@@ -182,8 +181,6 @@ class FakeChannel:
 class FakeSite:
     """A fake Twisted Web Site."""
 
-    pass
-
 
 def make_request(
     reactor,
@@ -310,7 +307,7 @@ class ResolvingMemoryReactorClock(MemoryReactorClock):
         class FakeResolver:
             def getHostByName(self, name, timeout=None):
                 if name not in lookups:
-                    return fail(DNSLookupError("OH NO: unknown %s" % (name,)))
+                    return fail(DNSLookupError(f"OH NO: unknown {name}"))
                 return succeed(lookups[name])
 
         self.nameResolver = SimpleResolverComplexifier(FakeResolver())

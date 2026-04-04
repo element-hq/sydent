@@ -6,12 +6,11 @@
 #
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
-from typing import Optional
 
 
 class Account:
     def __init__(
-        self, user_id: str, creation_ts: int, consent_version: Optional[str]
+        self, user_id: str, creation_ts: int, consent_version: str | None
     ) -> None:
         """
         :param user_id: The Matrix user ID for the account.

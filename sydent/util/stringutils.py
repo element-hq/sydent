@@ -8,7 +8,6 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import re
-from typing import Optional, Tuple
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
 
@@ -59,7 +58,7 @@ def is_valid_hostname(string: str) -> bool:
     return hostname_regex.match(string) is not None
 
 
-def parse_server_name(server_name: str) -> Tuple[str, Optional[str]]:
+def parse_server_name(server_name: str) -> tuple[str, str | None]:
     """Split a server name into host/port parts.
 
     No validation is done on the host part. The port part is validated to be
@@ -91,8 +90,8 @@ def parse_server_name(server_name: str) -> Tuple[str, Optional[str]]:
                 raise ValueError("Invalid port")
 
         return host, port
-    except Exception:
-        raise ValueError("Invalid server name '%s'" % server_name)
+    except Exception as e:
+        raise ValueError(f"Invalid server name '{server_name}'") from e
 
 
 def is_valid_matrix_server_name(string: str) -> bool:

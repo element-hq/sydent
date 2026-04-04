@@ -10,7 +10,8 @@
 import logging
 import random
 import time
-from typing import Awaitable, Callable, Dict, List, SupportsInt, Tuple
+from collections.abc import Awaitable, Callable
+from typing import SupportsInt
 
 import attr
 from twisted.internet.error import ConnectError
@@ -20,7 +21,7 @@ from twisted.names.error import DNSNameError, DomainError
 
 logger = logging.getLogger(__name__)
 
-SERVER_CACHE: Dict[bytes, List["Server"]] = {}
+SERVER_CACHE: dict[bytes, list["Server"]] = {}
 
 
 @attr.s(frozen=True, slots=True, auto_attribs=True)
@@ -43,7 +44,7 @@ class Server:
     expires: int = 0
 
 
-def pick_server_from_list(server_list: List[Server]) -> Tuple[bytes, int]:
+def pick_server_from_list(server_list: list[Server]) -> tuple[bytes, int]:
     """Randomly choose a server from the server list.
 
     :param server_list: List of candidate servers.
@@ -57,7 +58,7 @@ def pick_server_from_list(server_list: List[Server]) -> Tuple[bytes, int]:
     # cache of servers known to be "down" and filter them out
 
     min_priority = min(s.priority for s in server_list)
-    eligible_servers = list(s for s in server_list if s.priority == min_priority)
+    eligible_servers = [s for s in server_list if s.priority == min_priority]
     total_weight = sum(s.weight for s in eligible_servers)
     target_weight = random.randint(0, total_weight)
 
@@ -86,10 +87,10 @@ def pick_server_from_list(server_list: List[Server]) -> Tuple[bytes, int]:
 LookupService = Callable[
     [str],
     Awaitable[
-        Tuple[
-            List["RRHeader[Record_SRV]"],
-            List["RRHeader[object]"],
-            List["RRHeader[object]"],
+        tuple[
+            list["RRHeader[Record_SRV]"],
+            list["RRHeader[object]"],
+            list["RRHeader[object]"],
         ]
     ],
 ]
@@ -110,14 +111,14 @@ class SrvResolver:
     def __init__(
         self,
         lookup_service: LookupService = client.lookupService,
-        cache: Dict[bytes, List[Server]] = SERVER_CACHE,
+        cache: dict[bytes, list[Server]] = SERVER_CACHE,
         get_time: Callable[[], SupportsInt] = time.time,
     ) -> None:
         self._lookup_service = lookup_service
         self._cache = cache
         self._get_time = get_time
 
-    async def resolve_service(self, service_name: bytes) -> List["Server"]:
+    async def resolve_service(self, service_name: bytes) -> list["Server"]:
         """Look up a SRV record
 
         :param service_name: The record to look up.
@@ -156,7 +157,7 @@ class SrvResolver:
             and answers[0].payload
             and answers[0].payload.target == dns.Name(b".")
         ):
-            raise ConnectError("Service %s unavailable" % service_name.decode())
+            raise ConnectError(f"Service {service_name.decode()} unavailable")
 
         servers = []
 

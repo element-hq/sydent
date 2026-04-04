@@ -15,7 +15,7 @@ import ssl
 import string
 import urllib
 from html import escape
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 import twisted.python.log
 from prometheus_client import Counter
@@ -35,7 +35,7 @@ def sendEmail(
     sydent: "Sydent",
     templateFile: str,
     mailTo: str,
-    substitutions: Dict[str, str],
+    substitutions: dict[str, str],
     log_send_errors: bool = True,
 ) -> None:
     """
@@ -53,7 +53,7 @@ def sendEmail(
     myHostname = sydent.config.email.host_name
 
     midRandom = "".join([random.choice(string.ascii_letters) for _ in range(16)])
-    messageid = "<%d%s@%s>" % (time_msec(), midRandom, myHostname)
+    messageid = f"<{time_msec():d}{midRandom}@{myHostname}>"
 
     substitutions.update(
         {
@@ -93,13 +93,7 @@ def sendEmail(
     mailPassword = sydent.config.email.smtp_password
     mailTLSMode = sydent.config.email.tls_mode
 
-    logger.info(
-        "Sending mail to %s with mail server: %s"
-        % (
-            mailTo,
-            mailServer,
-        )
-    )
+    logger.info("Sending mail to %s with mail server: %s", mailTo, mailServer)
     try:
         smtp: smtplib.SMTP
         # Explicitly create a context, to ensure we verify the server's certificate

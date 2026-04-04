@@ -8,7 +8,8 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import logging
-from typing import TYPE_CHECKING, Dict, List, Mapping, Optional, Set, TypedDict, Union
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, TypedDict
 
 import yaml
 
@@ -33,17 +34,17 @@ class LocalisedPolicy(TypedDict):
     url: str
 
 
-VersionOrLang = Union[str, LocalisedPolicy]
+VersionOrLang = str | LocalisedPolicy
 
 
 class Terms:
-    def __init__(self, yamlObj: Optional[TermConfig]) -> None:
+    def __init__(self, yamlObj: TermConfig | None) -> None:
         """
         :param yamlObj: The parsed YAML.
         """
         self._rawTerms = yamlObj
 
-    def getMasterVersion(self) -> Optional[str]:
+    def getMasterVersion(self) -> str | None:
         """
         :return: The global (master) version of the terms, or None if there
             are no terms of service for this server.
@@ -52,7 +53,7 @@ class Terms:
             return None
         return self._rawTerms["master_version"]
 
-    def getForClient(self) -> Dict[str, Dict[str, Dict[str, VersionOrLang]]]:
+    def getForClient(self) -> dict[str, dict[str, dict[str, VersionOrLang]]]:
         # Examples:
         # "policy" -> "terms_of_service", "version" -> "1.2.3"
         # "policy" -> "terms_of_service", "en" -> LocalisedPolicy
@@ -60,7 +61,7 @@ class Terms:
         :return: A dict which value for the "policies" key is a dict which contains the
             "docs" part of the terms' YAML. That nested dict is empty if no terms.
         """
-        policies: Dict[str, Dict[str, VersionOrLang]] = {}
+        policies: dict[str, dict[str, VersionOrLang]] = {}
         if self._rawTerms is not None:
             for docName, doc in self._rawTerms["docs"].items():
                 policies[docName] = {
@@ -69,19 +70,19 @@ class Terms:
                 policies[docName].update(doc["langs"])
         return {"policies": policies}
 
-    def getUrlSet(self) -> Set[str]:
+    def getUrlSet(self) -> set[str]:
         """
         :return: All the URLs for the terms in a set. Empty set if no terms.
         """
         urls = set()
         if self._rawTerms is not None:
-            for docName, doc in self._rawTerms["docs"].items():
-                for langName, lang in doc["langs"].items():
+            for _docName, doc in self._rawTerms["docs"].items():
+                for _langName, lang in doc["langs"].items():
                     url = lang["url"]
                     urls.add(url)
         return urls
 
-    def urlListIsSufficient(self, urls: List[str]) -> bool:
+    def urlListIsSufficient(self, urls: list[str]) -> bool:
         """
         Checks whether the provided list of URLs (which represents the list of terms
         accepted by the user) is enough to allow the creation of the user's account.
@@ -137,13 +138,13 @@ def get_terms(sydent: "Sydent") -> Terms:
         raise Exception("No 'docs' key in terms")
     for docName, doc in termsYaml["docs"].items():
         if "version" not in doc:
-            raise Exception("'%s' has no version" % (docName,))
+            raise Exception(f"'{docName}' has no version")
         if "langs" not in doc:
-            raise Exception("'%s' has no langs" % (docName,))
+            raise Exception(f"'{docName}' has no langs")
         for langKey, lang in doc["langs"].items():
             if "name" not in lang:
-                raise Exception("lang '%s' of doc %s has no name" % (langKey, docName))
+                raise Exception(f"lang '{langKey}' of doc {docName} has no name")
             if "url" not in lang:
-                raise Exception("lang '%s' of doc %s has no url" % (langKey, docName))
+                raise Exception(f"lang '{langKey}' of doc {docName} has no url")
 
     return Terms(termsYaml)

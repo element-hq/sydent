@@ -7,7 +7,7 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from twisted.web.server import Request
 
@@ -89,7 +89,7 @@ class EmailRequestCodeServlet(SydentResource):
 
         brand = self.sydent.brand_from_request(request)
 
-        nextLink: Optional[str] = None
+        nextLink: str | None = None
         if "next_link" in args and not args["next_link"].startswith("file:///"):
             nextLink = args["next_link"]
 

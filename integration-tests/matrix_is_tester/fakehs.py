@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Copyright 2019 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,8 +31,8 @@ def token_for_random_user():
     The token will represent a random user account.
     """
     num = random.randint(0, 2**32)
-    user_id = "@user%d:127.0.0.1:4490" % (num,)
-    return "user:%s" % (base64.b64encode(user_id.encode("UTF-8")).decode("UTF-8"),)
+    user_id = f"@user{num}:127.0.0.1:4490"
+    return "user:{}".format(base64.b64encode(user_id.encode("UTF-8")).decode("UTF-8"))
 
 
 def token_for_user(user_id):
@@ -42,7 +40,7 @@ def token_for_user(user_id):
     Return an OpenID token as would be obtained from the client/server API.
     The token will represent the user_id given.
     """
-    return "user:%s" % (base64.b64encode(user_id.encode("UTF-8")).decode("UTF-8"),)
+    return "user:{}".format(base64.b64encode(user_id.encode("UTF-8")).decode("UTF-8"))
 
 
 def get_shared_fake_hs():

@@ -23,7 +23,7 @@ def time_msec() -> int:
 
 def _reject_invalid_json(val: str) -> NoReturn:
     """Do not allow Infinity, -Infinity, or NaN values in JSON."""
-    raise ValueError("Invalid JSON value: '%s'" % val)
+    raise ValueError(f"Invalid JSON value: '{val}'")
 
 
 # a custom JSON decoder which will reject Python extensions to JSON.

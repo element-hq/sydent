@@ -40,9 +40,9 @@ class ReplicationTestCase(unittest.TestCase):
         for i in range(assoc_count):
             assoc = ThreepidAssociation(
                 medium="email",
-                address="bob%d@example.com" % i,
+                address=f"bob{i}@example.com",
                 lookup_hash=None,
-                mxid="@bob%d:example.com" % i,
+                mxid=f"@bob{i}:example.com",
                 ts=(i * 10000),
                 not_before=0,
                 not_after=99999999999,

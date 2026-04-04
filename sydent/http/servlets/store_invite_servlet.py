@@ -104,7 +104,7 @@ class StoreInviteServlet(SydentResource):
             request.setResponseCode(400)
             return {
                 "errcode": "M_UNRECOGNIZED",
-                "error": "Didn't understand medium '%s'" % (medium,),
+                "error": f"Didn't understand medium '{medium}'",
             }
 
         if not (0 < len(address) <= MAX_EMAIL_ADDRESS_LENGTH):
@@ -170,14 +170,16 @@ class StoreInviteServlet(SydentResource):
 
         substitutions["bracketed_verified_sender"] = ""
         if verified_sender:
-            substitutions["bracketed_verified_sender"] = "(%s) " % (verified_sender,)
+            substitutions["bracketed_verified_sender"] = f"({verified_sender}) "
 
         substitutions["ephemeral_private_key"] = ephemeralPrivateKeyBase64
         if substitutions["room_name"] != "":
             if len(substitutions["room_name"]) > 30:
                 substitutions["room_name"] = substitutions["room_name"][:25] + "…"
 
-            substitutions["bracketed_room_name"] = "(%s) " % substitutions["room_name"]
+            substitutions["bracketed_room_name"] = "({}) ".format(
+                substitutions["room_name"]
+            )
 
         substitutions["web_client_location"] = (
             self.sydent.config.email.default_web_client_location
@@ -214,8 +216,8 @@ class StoreInviteServlet(SydentResource):
         pubKey = self.sydent.keyring.ed25519.verify_key
         pubKeyBase64 = encode_base64(pubKey.encode())
 
-        baseUrl = "%s/_matrix/identity/api/v1" % (
-            self.sydent.config.http.server_http_url_base,
+        baseUrl = (
+            f"{self.sydent.config.http.server_http_url_base}/_matrix/identity/api/v1"
         )
 
         keysToReturn = []

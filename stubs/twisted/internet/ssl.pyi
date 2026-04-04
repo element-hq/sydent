@@ -1,4 +1,4 @@
-from typing import Any, AnyStr, Dict, List, Optional, Type, TypeVar
+from typing import Any, AnyStr, TypeVar
 
 import OpenSSL.SSL
 
@@ -16,7 +16,7 @@ _C = TypeVar("_C")
 class Certificate:
     original: OpenSSL.crypto.X509
     @classmethod
-    def loadPEM(cls: Type[_C], data: AnyStr) -> _C: ...
+    def loadPEM(cls: type[_C], data: AnyStr) -> _C: ...
 
 def platformTrust() -> IOpenSSLTrustRoot: ...
 
@@ -26,21 +26,19 @@ class PrivateCertificate(Certificate):
 
 @implementer(IOpenSSLContextFactory)
 class CertificateOptions:
-    def __init__(
-        self, trustRoot: Optional[IOpenSSLTrustRoot] = ..., **kwargs: object
-    ): ...
+    def __init__(self, trustRoot: IOpenSSLTrustRoot | None = ..., **kwargs: object): ...
     def _makeContext(self) -> OpenSSL.SSL.Context: ...
     def getContext(self) -> OpenSSL.SSL.Context: ...
 
 def optionsForClientTLS(
     hostname: str,
-    trustRoot: Optional[IOpenSSLTrustRoot] = ...,
-    clientCertificate: Optional[PrivateCertificate] = ...,
-    acceptableProtocols: Optional[List[bytes]] = ...,
+    trustRoot: IOpenSSLTrustRoot | None = ...,
+    clientCertificate: PrivateCertificate | None = ...,
+    acceptableProtocols: list[bytes] | None = ...,
     *,
     # Shouldn't use extraCertificateOptions:
     # "any time you need to pass an option here that is a bug in this interface."
-    extraCertificateOptions: Optional[Dict[Any, Any]] = ...,
+    extraCertificateOptions: dict[Any, Any] | None = ...,
 ) -> IOpenSSLClientConnectionCreator: ...
 
 # Type ignore: I don't want to respecify the methods on the interface that we

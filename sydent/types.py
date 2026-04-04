@@ -7,6 +7,6 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from typing import Any, Dict
+from typing import Any
 
-JsonDict = Dict[str, Any]
+JsonDict = dict[str, Any]

@@ -11,7 +11,8 @@ import copy
 import functools
 import json
 import logging
-from typing import Any, Awaitable, Callable, Dict, Iterable, TypeVar
+from collections.abc import Awaitable, Callable, Iterable
+from typing import Any, TypeVar
 
 from prometheus_client import Counter
 from twisted.internet import defer
@@ -59,7 +60,7 @@ class MatrixRestError(Exception):
 
 def get_args(
     request: Request, args: Iterable[str], required: bool = True
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Helper function to get arguments for an HTTP request.
     Currently takes args from the top level keys of a json object or
@@ -106,8 +107,8 @@ def get_args(
         try:
             # json.loads doesn't allow bytes in Python 3.5
             request_args = json_decoder.decode(request.content.read().decode("UTF-8"))
-        except ValueError:
-            raise MatrixRestError(400, "M_BAD_JSON", "Malformed JSON")
+        except ValueError as e:
+            raise MatrixRestError(400, "M_BAD_JSON", "Malformed JSON") from e
 
     # If we didn't get anything from that, and it's a v1 api path, try the request args
     # (element-web's usage of the ed25519 sign servlet currently involves
@@ -124,15 +125,15 @@ def get_args(
             if isinstance(v, list) and len(v) == 1:
                 try:
                     request_args[k.decode("UTF-8")] = v[0].decode("UTF-8")
-                except UnicodeDecodeError:
+                except UnicodeDecodeError as e:
                     # Get a version of the key that has non-UTF-8 characters replaced by
                     # their \xNN escape sequence so it doesn't raise another exception.
                     safe_k = k.decode("UTF-8", errors="backslashreplace")
                     raise MatrixRestError(
                         400,
                         "M_INVALID_PARAM",
-                        "Parameter %s and its value must be valid UTF-8" % safe_k,
-                    )
+                        f"Parameter {safe_k} and its value must be valid UTF-8",
+                    ) from e
 
     elif request_args is None:
         request_args = {}

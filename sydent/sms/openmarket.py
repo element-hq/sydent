@@ -9,7 +9,7 @@
 
 import logging
 from base64 import b64encode
-from typing import TYPE_CHECKING, Dict, Optional, cast
+from typing import TYPE_CHECKING, cast
 
 from twisted.web.http_headers import Headers
 
@@ -30,7 +30,7 @@ API_BASE_URL = "https://smsc.openmarket.com/sms/v4/mt"
 # API_BASE_URL = "http://smsc-cie.openmarket.com/sms/v4/mt"
 
 # The TON (ie. Type of Number) codes by type used in our config file
-TONS: Dict[str, TypeOfNumber] = {
+TONS: dict[str, TypeOfNumber] = {
     "long": 1,
     "short": 3,
     "alpha": 5,
@@ -49,7 +49,7 @@ def tonFromType(t: str) -> TypeOfNumber:
     """
     if t in TONS:
         return TONS[t]
-    raise Exception("Unknown number type (%s) for originator" % t)
+    raise Exception(f"Unknown number type ({t}) for originator")
 
 
 class OpenMarketSMS:
@@ -58,7 +58,7 @@ class OpenMarketSMS:
         self.http_cli = SimpleHttpClient(sydent)
 
     async def sendTextSMS(
-        self, body: str, dest: str, source: Optional[Dict[str, str]] = None
+        self, body: str, dest: str, source: dict[str, str] | None = None
     ) -> None:
         """
         Sends a text message with the given body to the given MSISDN.
@@ -116,21 +116,12 @@ class OpenMarketSMS:
         if resp.code < 200 or resp.code >= 300:
             if response_body is None or "error" not in response_body:
                 raise Exception(
-                    "OpenMarket API responded with status %d (request ID: %s)"
-                    % (
-                        resp.code,
-                        request_id,
-                    ),
+                    f"OpenMarket API responded with status {resp.code:d} (request ID: {request_id})"
                 )
 
             error = response_body["error"]
             raise Exception(
-                "OpenMarket API responded with status %d (request ID: %s): %s"
-                % (
-                    resp.code,
-                    request_id,
-                    error,
-                ),
+                f"OpenMarket API responded with status {resp.code:d} (request ID: {request_id}): {error}"
             )
 
         ticket_id = None

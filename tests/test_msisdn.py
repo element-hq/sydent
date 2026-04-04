@@ -7,7 +7,6 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 import os.path
-from typing import Optional
 from unittest.mock import AsyncMock, Mock, patch
 
 import attr
@@ -53,7 +52,7 @@ class TestRequestCode(unittest.TestCase):
         }
         self.sydent = make_sydent(test_config=config)
 
-    def _make_request(self, url: str, body: Optional[JsonDict] = None) -> Mock:
+    def _make_request(self, url: str, body: JsonDict | None = None) -> Mock:
         # Patch out the SMS sending so we can investigate the resulting call.
         with patch(
             "sydent.sms.openmarket.OpenMarketSMS.sendTextSMS",

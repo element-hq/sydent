@@ -1,4 +1,5 @@
-from typing import Any, AnyStr, BinaryIO, Dict, List, Mapping, Optional, Tuple
+from collections.abc import Mapping
+from typing import Any, AnyStr, BinaryIO, Literal
 
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
@@ -12,31 +13,30 @@ from twisted.internet.interfaces import (
 from twisted.python import urlpath
 from twisted.web.client import URI
 from twisted.web.http_headers import Headers
-from typing_extensions import Literal
 from zope.interface import Interface
 
 class IClientRequest(Interface):
     method: bytes
-    absoluteURI: Optional[bytes]
+    absoluteURI: bytes | None
     headers: Headers
 
 class IRequest(Interface):
     method: bytes
     uri: bytes
     path: bytes
-    args: Mapping[bytes, List[bytes]]
-    prepath: List[bytes]
-    postpath: List[bytes]
+    args: Mapping[bytes, list[bytes]]
+    prepath: list[bytes]
+    postpath: list[bytes]
     requestHeaders: Headers
     content: BinaryIO
     responseHeaders: Headers
-    def getHeader(key: AnyStr) -> Optional[AnyStr]: ...
-    def getCookie(key: bytes) -> Optional[bytes]: ...
-    def getAllHeaders() -> Dict[bytes, bytes]: ...
+    def getHeader(key: AnyStr) -> AnyStr | None: ...
+    def getCookie(key: bytes) -> bytes | None: ...
+    def getAllHeaders() -> dict[bytes, bytes]: ...
     def getRequestHostname() -> bytes: ...
     def getHost() -> IAddress: ...
     def getClientAddress() -> IAddress: ...
-    def getClientIP() -> Optional[str]: ...
+    def getClientIP() -> str | None: ...
     def getUser() -> str: ...
     def getPassword() -> str: ...
     def isSecure() -> bool: ...
@@ -50,14 +50,14 @@ class IRequest(Interface):
     def addCookie(
         k: AnyStr,
         v: AnyStr,
-        expires: Optional[AnyStr] = ...,
-        domain: Optional[AnyStr] = ...,
-        path: Optional[AnyStr] = ...,
-        max_age: Optional[AnyStr] = ...,
-        comment: Optional[AnyStr] = ...,
-        secure: Optional[bool] = ...,
+        expires: AnyStr | None = ...,
+        domain: AnyStr | None = ...,
+        path: AnyStr | None = ...,
+        max_age: AnyStr | None = ...,
+        comment: AnyStr | None = ...,
+        secure: bool | None = ...,
     ) -> None: ...
-    def setResponseCode(code: int, message: Optional[bytes] = ...) -> None: ...
+    def setResponseCode(code: int, message: bytes | None = ...) -> None: ...
     def setHeader(k: AnyStr, v: AnyStr) -> None: ...
     def redirect(url: AnyStr) -> None: ...
     # returns http.CACHED or False. http.CACHED is a string constant, but we
@@ -73,13 +73,13 @@ class IBodyProducer(IPushProducer):
     def stopProducing() -> None: ...
 
 class IResponse(Interface):
-    version: Tuple[str, int, int]
+    version: tuple[str, int, int]
     code: int
     phrase: str
     headers: Headers
     length: int | object
     request: IClientRequest
-    previousResponse: Optional[IResponse]
+    previousResponse: IResponse | None
     def deliverBody(protocol: IProtocol) -> None: ...
     def setPreviousResponse(response: IResponse) -> None: ...
 
@@ -87,8 +87,8 @@ class IAgent(Interface):
     def request(
         method: bytes,
         uri: bytes,
-        headers: Optional[Headers] = ...,
-        bodyProducer: Optional[IBodyProducer] = ...,
+        headers: Headers | None = ...,
+        bodyProducer: IBodyProducer | None = ...,
     ) -> Deferred[IResponse]: ...
 
 class IPolicyForHTTPS(Interface):

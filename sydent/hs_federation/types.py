@@ -1,4 +1,4 @@
-from typing import Dict, TypedDict
+from typing import TypedDict
 
 import attr
 
@@ -9,7 +9,7 @@ class VerifyKey(TypedDict):
     key: str
 
 
-VerifyKeys = Dict[str, VerifyKey]
+VerifyKeys = dict[str, VerifyKey]
 
 
 @attr.s(frozen=True, slots=True, auto_attribs=True)
@@ -20,7 +20,7 @@ class CachedVerificationKeys:
 
 # key: "signing key identifier"; value: signature encoded as unpadded base 64
 # See https://spec.matrix.org/unstable/appendices/#signing-details
-Signature = Dict[str, str]
+Signature = dict[str, str]
 
 
 @attr.s(frozen=True, slots=True, auto_attribs=True)
@@ -28,6 +28,6 @@ class SignedMatrixRequest:
     method: bytes
     uri: bytes
     destination_is: str
-    signatures: Dict[str, Signature]
+    signatures: dict[str, Signature]
     origin: str
     content: JsonDict

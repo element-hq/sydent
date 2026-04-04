@@ -126,12 +126,22 @@ line-length = 88
 
 [tool.ruff.lint]
 select = [
-    "E", "W",   # pycodestyle
-    "F",         # pyflakes
-    "I",         # isort (replaces standalone isort)
+    "E", "W",    # pycodestyle
+    "F",          # pyflakes
+    "I",          # isort
+    "UP",         # pyupgrade
+    "B",          # flake8-bugbear
+    "C4",         # flake8-comprehensions
+    "YTT",        # flake8-2020
+    "SLOT",       # flake8-slots
+    "T10",        # flake8-debugger
+    "PIE",        # flake8-pie
+    "EXE",        # flake8-executable
+    "LOG",        # flake8-logging
+    "G",          # flake8-logging-format
 ]
 ignore = [
-    "E501",  # line too long (formatter handles what it can)
+    "E501",       # line too long
 ]
 
 [tool.ruff.lint.isort]
