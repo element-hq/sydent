@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 
 dependencies = [
+    "aiosmtpd>=1.4",
     "Twisted>=19.2.1",
     "requests>=2.22.0",
 ]

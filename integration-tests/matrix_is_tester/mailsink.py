@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncore
+import asyncio
 import atexit
-import smtpd
 from multiprocessing import Process, Queue
+
+from aiosmtpd.controller import Controller
 
 shared_instance = None
 
@@ -36,30 +37,43 @@ def destroy_shared():
     shared_instance.tearDown()
 
 
-class MailSinkSmtpServer(smtpd.SMTPServer):
-    def __init__(self, localaddr, remoteaddr, q):
-        smtpd.SMTPServer.__init__(self, localaddr, remoteaddr)
-        self.queue = q
+class _MailSinkHandler:
+    def __init__(self, queue):
+        self.queue = queue
 
-    def process_message(self, peer, mailfrom, rctpto, data, **kwargs):
+    async def handle_DATA(self, server, session, envelope):
         self.queue.put(
-            {"peer": peer, "mailfrom": mailfrom, "rctpto": rctpto, "data": data}
+            {
+                "peer": session.peer,
+                "mailfrom": envelope.mail_from,
+                "rctpto": envelope.rcpt_tos,
+                "data": envelope.content.decode("utf-8", errors="replace"),
+            }
         )
+        return "250 OK"
 
 
-def run_mail_sink(q):
-    MailSinkSmtpServer(("127.0.0.1", 9925), None, q)
-    asyncore.loop()
+def _run_mail_sink(q):
+    handler = _MailSinkHandler(q)
+    controller = Controller(handler, hostname="127.0.0.1", port=9925)
+    controller.start()
+    # Block forever (the controller runs in a thread)
+    try:
+        asyncio.get_event_loop().run_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        controller.stop()
 
 
-class MailSink(object):
+class MailSink:
     def launch(self):
         self.queue = Queue()
-        self.process = Process(target=run_mail_sink, args=(self.queue,))
+        self.process = Process(target=_run_mail_sink, args=(self.queue,))
         self.process.start()
 
     def get_mail(self):
-        return self.queue.get(timeout=0.5)
+        return self.queue.get(timeout=2.0)
 
     def tearDown(self):
         self.process.terminate()
