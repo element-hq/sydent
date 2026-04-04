@@ -1,5 +1,0 @@
-include LICENSE
-graft res
-include scripts/generate-key
-include scripts/sydent-bind
-recursive-include sydent *.sql

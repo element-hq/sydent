@@ -25,7 +25,7 @@ dependencies = [
     "service-identity>=1.0.0",
     "signedjson==1.1.1",
     "sortedcontainers>=2.1.0",
-    "twisted>=18.4.0",
+    "twisted>=18.4.0,<25",
     "unpaddedbase64>=1.1.0",
     "zope.interface>=4.6.0",
 ]
@@ -57,8 +57,9 @@ dev = [
     "towncrier>=21.9.0",
 ]
 
-[tool.poetry]
-packages = [{ include = "sydent" }]
+[tool.uv.build-backend]
+module-name = "sydent"
+module-root = ""
 
 [tool.towncrier]
 package = "sydent"
@@ -137,5 +138,5 @@ select = [
 ]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.11.3,<1"]
+build-backend = "uv_build"

@@ -72,7 +72,7 @@ class ReplicationHttpsClient:
             b"POST", uri.encode("utf8"), headers, FileBodyProducer(BytesIO(json_bytes))
         )
 
-        return reqDeferred
+        return reqDeferred  # type: ignore[return-value]
 
 
 @implementer(IPolicyForHTTPS)

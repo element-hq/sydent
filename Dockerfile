@@ -1,65 +1,47 @@
-# This Dockerfile installs Sydent from source, which is assumed to be in the current
-# working directory. The resulting image contains a single "sydent" user, and populates
-# their home area with "src" and "venv" directories. The entrypoint runs Sydent,
-# listening on port 8090.
-#
-# Users must provide a persistent volume available to the container as `/data`. This
-# will contain Sydent's configuration and database. A blank configuration and database
-# file is created the first time Sydent runs.
+ARG PYTHON_VERSION=3.13
+ARG DEBIAN_VERSION=trixie
 
-# Step 1: install dependencies
-FROM docker.io/python:3.11-slim-bookworm as builder
+# Stage 1: Build
+FROM ghcr.io/astral-sh/uv:python${PYTHON_VERSION}-${DEBIAN_VERSION}-slim AS builder
 
-# Install build tools needed for compiling native extensions (cffi, etc.)
-RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev libffi-dev \
-    && rm -rf /var/lib/apt/lists/*
+ENV UV_PYTHON_DOWNLOADS=0
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
 
-# Add user sydent
-RUN addgroup --system --gid 993 sydent \
-    && useradd -m --system --uid 993 -g sydent sydent
-USER sydent:sydent
+WORKDIR /app
 
-# Install poetry
-RUN pip install --user poetry==2.2.1 poetry-plugin-export
+# Step 1: Install dependencies only (cached unless pyproject.toml/uv.lock change)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-dev --extra sentry --extra prometheus
 
-# Copy source code and resources
-WORKDIR /home/sydent/src
-COPY --chown=sydent:sydent ["res", "res"]
-COPY --chown=sydent:sydent ["scripts", "scripts"]
-COPY --chown=sydent:sydent ["sydent", "sydent"]
-COPY --chown=sydent:sydent ["README.rst", "pyproject.toml", "poetry.lock", "./"]
+# Step 2: Copy source and install the project
+COPY . /app/
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev --no-editable --extra sentry --extra prometheus
 
-# Install dependencies
-RUN python -m poetry install -vv --without dev --no-interaction --extras "prometheus sentry"
+# Stage 2: Runtime
+FROM docker.io/library/python:${PYTHON_VERSION}-slim-${DEBIAN_VERSION}
 
-# Record dependencies for posterity
-RUN python -m poetry export -o requirements.txt
-
-# Make the virtualenv accessible for the final image
-RUN ln -s $(python -m poetry env info -p) /home/sydent/venv
-
-# Nuke bytecode files to keep the final image slim.
-RUN find /home/sydent/venv -type f -name '*.pyc' -delete
-
-# Step 2: Create runtime image
-FROM docker.io/python:3.11-slim-bookworm
-
-# Add user sydent and create /data directory
+# Create sydent user and data directory
 RUN addgroup --system --gid 993 sydent \
     && useradd -m --system --uid 993 -g sydent sydent \
     && mkdir /data \
     && chown sydent:sydent /data
 
-# Copy sydent and the virtualenv
-COPY --from=builder ["/home/sydent/src", "/home/sydent/src"]
-COPY --from=builder ["/home/sydent/venv", "/home/sydent/venv"]
+# Copy the virtualenv from builder
+COPY --from=builder /app/.venv /app/.venv
+# Copy resources needed at runtime
+COPY --from=builder /app/res /app/res
 
+ENV PATH="/app/.venv/bin:$PATH"
 ENV SYDENT_CONF=/data/sydent.conf
 ENV SYDENT_PID_FILE=/data/sydent.pid
 ENV SYDENT_DB_PATH=/data/sydent.db
 
-WORKDIR /home/sydent
+WORKDIR /app
 USER sydent:sydent
 VOLUME ["/data"]
 EXPOSE 8090/tcp
-CMD [ "venv/bin/python", "-m", "sydent.sydent" ]
+CMD ["sydent"]

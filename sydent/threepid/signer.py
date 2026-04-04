@@ -40,4 +40,4 @@ class Signer:
         sgassoc = signedjson.sign.sign_json(
             sgassoc, self.sydent.config.general.server_name, self.sydent.keyring.ed25519
         )
-        return sgassoc
+        return sgassoc  # type: ignore[no-any-return]

@@ -112,7 +112,7 @@ class _IPBlacklistingResolver:
                 _callback()
 
         self._reactor.nameResolver.resolveHostName(
-            EndpointReceiver, hostname, portNumber=portNumber
+            EndpointReceiver, hostname, portNumber=portNumber  # type: ignore[arg-type]
         )
 
         return recv

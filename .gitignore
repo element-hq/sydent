@@ -8,6 +8,7 @@ _trial_temp.lock
 *.egg
 *.egg-info
 .python-version
+.venv
 .mypy_cache
 /env
 
