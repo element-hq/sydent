@@ -11,6 +11,7 @@ license-files = ["LICENSE"]
 
 # Lower bounds copied from matrix-org/matrix-is-tester's setup.py.
 dependencies = [
+    "aiosmtpd",
     "Twisted>=19.2.1",
     "requests>=2.22.0",
 ]
