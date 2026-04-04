@@ -91,9 +91,6 @@ suite for compliance with the [Matrix Identity Service API](https://spec.matrix.
 (Features that are Sydent-specific belong in unit tests rather than the black-box test suite.)
 It is a uv workspace member, so `uv sync` installs it alongside Sydent.
 
-It only runs on Python 3.11: it imports `asyncore` and `smtpd`, which Python 3.12
-removed.
-
 To run it, execute:
 
 ```shell
