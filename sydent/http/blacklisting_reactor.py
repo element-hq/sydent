@@ -8,7 +8,7 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import logging
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from netaddr import IPAddress, IPSet
 from twisted.internet.address import IPv4Address, IPv6Address
@@ -68,7 +68,7 @@ class _IPBlacklistingResolver:
     def resolveHostName(
         self, recv: IResolutionReceiver, hostname: str, portNumber: int = 0
     ) -> IResolutionReceiver:
-        addresses = []  # type: List[IAddress]
+        addresses: list[IAddress] = []
 
         def _callback() -> None:
             has_bad_ip = False
@@ -112,7 +112,9 @@ class _IPBlacklistingResolver:
                 _callback()
 
         self._reactor.nameResolver.resolveHostName(
-            EndpointReceiver, hostname, portNumber=portNumber  # type: ignore[arg-type]
+            EndpointReceiver,  # type: ignore[arg-type]
+            hostname,
+            portNumber=portNumber,
         )
 
         return recv

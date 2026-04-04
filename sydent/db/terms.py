@@ -27,7 +27,7 @@ class TermsStore:
         """
         cur = self.sydent.db.cursor()
         res = cur.execute(
-            "select url from accepted_terms_urls " "where user_id = ?",
+            "select url from accepted_terms_urls where user_id = ?",
             (user_id,),
         )
 

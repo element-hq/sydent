@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from io import BytesIO
-from typing import Dict, Optional
+from typing import Optional
 from unittest.mock import MagicMock
 
 import attr
@@ -283,7 +283,7 @@ def setup_logging():
     """
     root_logger = logging.getLogger()
 
-    log_format = "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s" " - %(message)s"
+    log_format = "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s"
 
     handler = ToTwistedHandler()
     formatter = logging.Formatter(log_format)

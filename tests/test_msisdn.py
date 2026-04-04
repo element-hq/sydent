@@ -59,7 +59,6 @@ class TestRequestCode(unittest.TestCase):
             "sydent.sms.openmarket.OpenMarketSMS.sendTextSMS",
             new_callable=AsyncMock,
         ) as sendTextSMS:
-
             request, channel = make_request(
                 self.sydent.reactor,
                 self.sydent.clientApiHttpServer.factory,

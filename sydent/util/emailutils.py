@@ -147,8 +147,7 @@ def check_valid_email_address(address: str, allow_description: bool) -> None:
         raise EmailAddressException(f"Couldn't parse email address {address}.")
     if not allow_description and address != parsed_address:
         raise EmailAddressException(
-            f"Parsing address ({address} yielded a different address"
-            f"({parsed_address})"
+            f"Parsing address ({address} yielded a different address({parsed_address})"
         )
 
 

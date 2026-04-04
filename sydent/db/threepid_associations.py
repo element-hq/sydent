@@ -382,8 +382,7 @@ class GlobalAssociationStore:
 
         cur = self.sydent.db.cursor()
         cur.execute(
-            "DELETE FROM global_threepid_associations WHERE "
-            "medium = ? AND address = ?",
+            "DELETE FROM global_threepid_associations WHERE medium = ? AND address = ?",
             (medium, normalised_address),
         )
         logger.info(
@@ -404,8 +403,7 @@ class GlobalAssociationStore:
         cur = self.sydent.db.cursor()
 
         cur.execute(
-            "CREATE TEMPORARY TABLE tmp_retrieve_mxids_for_hashes "
-            "(lookup_hash VARCHAR)"
+            "CREATE TEMPORARY TABLE tmp_retrieve_mxids_for_hashes (lookup_hash VARCHAR)"
         )
         cur.execute(
             "CREATE INDEX tmp_retrieve_mxids_for_hashes_lookup_hash ON "
@@ -420,8 +418,7 @@ class GlobalAssociationStore:
             inserted_cap = 0
             while inserted_cap < len(tuplized_addresses):
                 cur.executemany(
-                    "INSERT INTO tmp_retrieve_mxids_for_hashes(lookup_hash) "
-                    "VALUES (?)",
+                    "INSERT INTO tmp_retrieve_mxids_for_hashes(lookup_hash) VALUES (?)",
                     tuplized_addresses[inserted_cap : inserted_cap + 500],
                 )
                 inserted_cap += 500

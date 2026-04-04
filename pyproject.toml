@@ -42,9 +42,7 @@ Repository = "https://github.com/element-hq/sydent"
 
 [dependency-groups]
 dev = [
-    "black>=23.1.0",
-    "ruff==0.0.189",
-    "isort==5.8.0",
+    "ruff>=0.14.0",
     "matrix-is-tester",
     "mypy>=0.902",
     "mypy-zope>=0.3.1",
@@ -103,13 +101,6 @@ directory = "misc"
 name = "Internal Changes"
 showcontent = true
 
-[tool.isort]
-profile = "black"
-known_local_folder = ["tests", "matrix_is_tester"]
-
-[tool.black]
-target-version = ['py310']
-
 [tool.mypy]
 plugins = "mypy_zope:plugin"
 show_error_codes = true
@@ -133,16 +124,20 @@ ignore_missing_imports = true
 [tool.ruff]
 line-length = 88
 
-ignore = [
-    "E501",
-    "F401",
-    "F821",
-]
+[tool.ruff.lint]
 select = [
-    "E",
-    "W",
-    "F",
+    "E", "W",   # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort (replaces standalone isort)
 ]
+ignore = [
+    "E501",  # line too long (formatter handles what it can)
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-first-party = ["sydent"]
+known-local-folder = ["tests", "matrix_is_tester"]
 
 [build-system]
 requires = ["uv_build>=0.11.3,<1"]

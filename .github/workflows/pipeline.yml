@@ -32,15 +32,11 @@ jobs:
 
       - uses: astral-sh/setup-uv@v5
 
-      - name: Import order (isort)
-        run: uv run isort --check --diff .
+      - name: Lint (ruff)
+        run: uv run ruff check sydent/ tests/ stubs/ integration-tests/
 
-      - name: Code style (black)
-        run: uv run black --check --diff .
-
-      - name: Semantic checks (ruff)
-        # --quiet suppresses the update check.
-        run: uv run ruff --quiet .
+      - name: Format (ruff)
+        run: uv run ruff format --check sydent/ tests/ stubs/ integration-tests/
 
       - name: Restore/persist mypy's cache
         uses: actions/cache@v5

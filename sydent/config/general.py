@@ -97,9 +97,10 @@ class GeneralConfig(BaseConfig):
         )
         if homeserver_allow_list and self.enable_v1_access:
             raise RuntimeError(
-                """The V1 api must be disabled for the `homeserver_allow_list` to function, if you have 
-                specified a `homeserver_allow_list` in the config file please ensure that the config 
-                option `enable_v1_access` is set to 'false'."""
+                "The V1 api must be disabled for the `homeserver_allow_list` to"
+                " function, if you have specified a `homeserver_allow_list` in"
+                " the config file please ensure that the config option"
+                " `enable_v1_access` is set to 'false'."
             )
         self.homeserver_allow_list = homeserver_allow_list
 
