@@ -6,86 +6,43 @@ this case, the [GNU Affero General Public License v3](LICENSE-AGPL-3.0).
 
 ## Set up your development environment
 
-To contribute to Sydent, ensure you have Python 3.7 and `git` available on your 
+To contribute to Sydent, ensure you have Python 3.10+ and `git` available on your
 system. You'll need to clone the source code first:
 
 ```shell
 git clone https://github.com/element-hq/sydent.git
+cd sydent
 ```
 
-### Installing `poetry`
+### Installing `uv`
 
-Sydent uses [Poetry](https://python-poetry.org/) to manage its dependencies.
-See [its installation instructions](https://python-poetry.org/docs/master/#installation)
-to get started. They recommend using a custom installation script, which installs
-poetry in an isolated environment capable of self updating. We recommend using
-[`pipx`](https://pypa.github.io/pipx/) instead:
+Sydent uses [uv](https://docs.astral.sh/uv/) to manage its dependencies.
+See [its installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
+to get started.
 
-```shell
-pip install pipx
-pipx install poetry==1.1.12
-poetry --version
-```
+### Install dependencies
 
-For the time being, we are erring towards caution by using a pinned version of 
-poetry.
-
-### Generate a virtualenv
-
-Poetry manages a virtual environment ('virtualenv') for Sydent, using specific versions of
-every dependency. To create this environment, run
+uv manages a virtual environment for Sydent, using specific versions of every
+dependency. To create this environment and install everything, run:
 
 ```bash
-cd sydent
-poetry install
+uv sync
 ```
 
-This installs Sydent, its dependencies, and useful development tools into poetry's
-virtual environment. To run a one-off command in this environment, use `poetry run`.
-Otherwise, you'll end up running against the system python environment.
+This installs Sydent, its dependencies, and useful development tools into a
+`.venv` directory. To run a one-off command in this environment, use `uv run`:
 
 ```shell
-$ which python
-/usr/bin/python
-$ poetry run which python
-/home/user/.cache/pypoetry/virtualenvs/matrix-sydent-Ew7U0NLX-py3.10/bin/python
+uv run which python
+uv run sydent
 ```
-
-To avoid repeatedly typing out `poetry run`, use `poetry shell`:
-
-```shell
-$ poetry shell
-Spawning shell within /home/user/.cache/pypoetry/virtualenvs/matrix-sydent-Ew7U0NLX-py3.10
-. /home/user/.cache/pypoetry/virtualenvs/matrix-sydent-Ew7U0NLX-py3.10/bin/activate
-
-$ which python
-~/.cache/pypoetry/virtualenvs/matrix-sydent-Ew7U0NLX-py3.10/bin/python
-```
-
-Be sure to do this _every time_ you open a new terminal window for working on
-Sydent. Using `poetry run` or `poetry shell` ensures that any Python commands 
-you run (`pip`, `python`, etc.) use the versions inside your venv, and not your 
-system Python.
-
-When you're done, you can close your terminal.
-
-### Optional: `direnv`
-
-If even typing `poetry shell` is too much work for you, take a look at 
-[`direnv`](https://direnv.net/). A few steps are needed:
-
-1. install direnv.
-2. Add the configuration from [here](https://github.com/direnv/direnv/wiki/Python#poetry) to `~/.direnvrc`.
-3. In the Sydent checkout, run `echo layout poetry >> .envrc`. Then run `direnv allow`.
-
-From now on, when you `cd` into the sydent directory, `poetry shell` will run automatically. Whenever you navigate out of the sydent directory, you'll no longer be using poetry's venv.
 
 ### Run the unit tests
 
 To make sure everything is working as expected, run the unit tests:
 
 ```bash
-poetry run trial tests
+uv run trial tests
 ```
 
 If you see a message like:
@@ -104,12 +61,12 @@ Then all is well and you're ready to work!
 Sydent uses [matrix-is-tester](https://github.com/matrix-org/matrix-is-tester/) to provide
 black-box testing of compliance with the [Matrix Identity Service API](https://matrix.org/docs/spec/identity_service/latest).
 (Features that are Sydent-specific belong in unit tests rather than the black-box test suite.)
-This project is marked as a development dependency, so Poetry will automatically
-install for you.
+This project is marked as a development dependency, so `uv sync` will
+automatically install it for you.
 
 Now, to run `matrix-is-tester`, execute:
 ```
-poetry run trial matrix_is_tester
+uv run trial matrix_is_tester
 ```
 
 #### Advanced
@@ -152,14 +109,13 @@ Some other points to follow:
 
 ## Code style and continuous integration
 
-Sydent uses `black`, `isort` and `ruff` to enforce code style. Use the following
-script to enforce these style guides:
+Sydent uses [ruff](https://docs.astral.sh/ruff/) for linting and formatting, and
+[mypy](https://mypy-lang.org/) for type checking. Use the following script to run
+all checks:
 
 ```shell
-poetry run scripts-dev/lint.sh
+uv run scripts-dev/lint.sh
 ```
-
-(This also runs `mypy`, our preferred typechecker.)
 
 All of these checks are automatically run against any pull request via GitHub
 Actions. If your change breaks the build, this
