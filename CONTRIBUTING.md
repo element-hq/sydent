@@ -86,33 +86,23 @@ Then all is well and you're ready to work!
 
 ### Run the black-box tests
 
-Sydent uses [matrix-is-tester](https://github.com/matrix-org/matrix-is-tester/) to provide
-black-box testing of compliance with the [Matrix Identity Service API](https://matrix.org/docs/spec/identity_service/latest).
+The `integration-tests/` directory contains `matrix_is_tester`, a black-box test
+suite for compliance with the [Matrix Identity Service API](https://spec.matrix.org/latest/identity-service-api/).
 (Features that are Sydent-specific belong in unit tests rather than the black-box test suite.)
-This project is marked as a development dependency, so `uv sync` installs it
-for you.
+It is a uv workspace member, so `uv sync` installs it alongside Sydent.
 
-`matrix-is-tester` only runs on Python 3.11: it imports `asyncore` and `smtpd`,
-which Python 3.12 removed.
+It only runs on Python 3.11: it imports `asyncore` and `smtpd`, which Python 3.12
+removed.
 
-Now, to run `matrix-is-tester`, execute:
-```
+To run it, execute:
+
+```shell
 uv run trial matrix_is_tester
 ```
 
-#### Advanced
-
-The steps above are sufficient and describe a clean way to run the black-box tests.
-However, in the event that you need more control, this subsection provides more information.
-
-The `SYDENT_PYTHON` environment variable can be set to launch Sydent with a specific python binary:
-
-```
-SYDENT_PYTHON=/path/to/python trial matrix_is_tester
-```
-
-The `matrix_is_test` directory contains Sydent's launcher for `matrix_is_tester`: this means
-that Sydent's directory needs to be on the Python path (e.g. `PYTHONPATH=$PYTHONPATH:/path/to/sydent`).
+Each run starts Sydent on local ports 8098 and 8099, a fake homeserver on port
+4490 and an SMTP sink on port 9925. See
+[`integration-tests/README.md`](integration-tests/README.md) for details.
 
 ## How to contribute
 

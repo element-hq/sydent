@@ -30,6 +30,9 @@ WORKDIR /home/sydent/src
 # Copy the files that the build of Sydent's wheel reads
 COPY ["sydent", "sydent"]
 COPY ["README.rst", "pyproject.toml", "uv.lock", "LICENSE-AGPL-3.0", "LICENSE-COMMERCIAL", "./"]
+# uv needs every workspace member's metadata to check uv.lock, even though the
+# image does not install the integration tests.
+COPY ["integration-tests/pyproject.toml", "integration-tests/"]
 
 # Install Sydent and its dependencies into the virtualenv
 RUN --mount=type=cache,target=/root/.cache/uv \

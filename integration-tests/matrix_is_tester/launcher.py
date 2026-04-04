@@ -9,6 +9,7 @@
 
 import os
 import shutil
+import sys
 import tempfile
 import time
 from subprocess import Popen
@@ -50,16 +51,8 @@ class MatrixIsTestLauncher:
         self.with_terms = with_terms
 
     def launch(self):
-        sydent_path = os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__),
-                "..",
-            )
-        )
-        testsubject_path = os.path.join(
-            sydent_path,
-            "matrix_is_test",
-        )
+        # The templates and terms live next to this file.
+        testsubject_path = os.path.abspath(os.path.dirname(__file__))
         terms_path = (
             os.path.join(testsubject_path, "terms.yaml") if self.with_terms else ""
         )
@@ -76,21 +69,12 @@ class MatrixIsTestLauncher:
                 )
             )
 
-        newEnv = os.environ.copy()
-        newEnv.update(
-            {
-                "PYTHONPATH": sydent_path,
-            }
-        )
-
         stderr_fp = open(os.path.join(testsubject_path, "sydent.stderr"), "w")
 
-        pybin = os.getenv("SYDENT_PYTHON", "python")
-
+        # Sydent is installed in the same environment as this package.
         self.process = Popen(
-            args=[pybin, "-m", "sydent.sydent"],
+            args=[sys.executable, "-m", "sydent.sydent"],
             cwd=self.tmpdir,
-            env=newEnv,
             stderr=stderr_fp,
         )
         # XXX: wait for startup in a sensible way
