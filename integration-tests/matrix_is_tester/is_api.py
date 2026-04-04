@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-
-# -*- coding: utf-8 -*-
-
 # Copyright 2019 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +24,7 @@ from matrix_is_tester.fakehs import token_for_random_user
 logger = logging.getLogger(__name__)
 
 
-class IsApi(object):
+class IsApi:
     """
     Wrappers around the IS REST API
     """
@@ -52,7 +48,7 @@ class IsApi(object):
         elif version == "v2":
             self.apiRoot = base_url + "/_matrix/identity/v2"
         else:
-            raise Exception("Invalid version: %s" % (version,))
+            raise Exception(f"Invalid version: {version}")
 
         self.mail_sink = mail_sink
 
@@ -66,7 +62,7 @@ class IsApi(object):
             openid_token = token_for_random_user()
 
         body = self.register(":".join([str(x) for x in hs_addr]), openid_token)
-        self.headers = {"Authorization": "Bearer %s" % (body["token"],)}
+        self.headers = {"Authorization": "Bearer {}".format(body["token"])}
 
     def get_token_from_mail(self):
         mail = self.mail_sink.get_mail()

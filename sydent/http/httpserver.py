@@ -73,7 +73,8 @@ def _with_require_auth(handler: Any, require_auth: bool) -> Any:
 
     @functools.wraps(handler)
     async def wrapper(request: web.Request) -> web.Response:
-        return await handler(request, require_auth=require_auth)
+        response: web.Response = await handler(request, require_auth=require_auth)
+        return response
 
     return wrapper
 
@@ -83,7 +84,8 @@ def _with_lookup_pepper(handler: Any, lookup_pepper: str) -> Any:
 
     @functools.wraps(handler)
     async def wrapper(request: web.Request) -> web.Response:
-        return await handler(request, lookup_pepper=lookup_pepper)
+        response: web.Response = await handler(request, lookup_pepper=lookup_pepper)
+        return response
 
     return wrapper
 

@@ -7,64 +7,57 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from twisted.trial import unittest
+import pytest
+from aiohttp.test_utils import TestClient, TestServer
 
-from sydent.http.auth import tokenFromRequest
-
-from tests.utils import make_request, make_sydent
+from tests.utils import make_sydent
 
 
-class AuthTestCase(unittest.TestCase):
-    """Tests Sydent's auth code"""
+@pytest.fixture
+def sydent_with_token():
+    """Create a Sydent instance with a fake token in the database."""
+    sydent = make_sydent()
+    test_token = "testingtoken"
 
-    def setUp(self):
-        # Create a new sydent
-        self.sydent = make_sydent()
-        self.test_token = "testingtoken"
+    # Inject a fake OpenID token into the database
+    cur = sydent.db.cursor()
+    cur.execute(
+        "INSERT INTO accounts (user_id, created_ts, consent_version)VALUES (?, ?, ?)",
+        ("@bob:localhost", 101010101, "asd"),
+    )
+    cur.execute(
+        "INSERT INTO tokens (user_id, token) VALUES (?, ?)",
+        ("@bob:localhost", test_token),
+    )
+    sydent.db.commit()
 
-        # Inject a fake OpenID token into the database
-        cur = self.sydent.db.cursor()
-        cur.execute(
-            "INSERT INTO accounts (user_id, created_ts, consent_version)"
-            "VALUES (?, ?, ?)",
-            ("@bob:localhost", 101010101, "asd"),
-        )
-        cur.execute(
-            "INSERT INTO tokens (user_id, token)VALUES (?, ?)",
-            ("@bob:localhost", self.test_token),
-        )
+    return sydent, test_token
 
-        self.sydent.db.commit()
 
-    def test_can_read_token_from_headers(self):
-        """Tests that Sydent correctly extracts an auth token from request headers"""
-        self.sydent.run()
+@pytest.fixture
+async def client(sydent_with_token):
+    sydent, _ = sydent_with_token
+    app = sydent.clientApiHttpServer.app
+    async with TestClient(TestServer(app)) as client:
+        yield client
 
-        request, _ = make_request(
-            self.sydent.reactor,
-            self.sydent.clientApiHttpServer.factory,
-            "GET",
-            "/_matrix/identity/v2/hash_details",
-        )
-        request.requestHeaders.addRawHeader(
-            b"Authorization", b"Bearer " + self.test_token.encode("ascii")
-        )
 
-        token = tokenFromRequest(request)
+async def test_can_read_token_from_headers(client, sydent_with_token):
+    """Tests that Sydent correctly extracts an auth token from request headers"""
+    _, test_token = sydent_with_token
 
-        self.assertEqual(token, self.test_token)
+    resp = await client.get(
+        "/_matrix/identity/v2/hash_details",
+        headers={"Authorization": f"Bearer {test_token}"},
+    )
+    assert resp.status == 200
 
-    def test_can_read_token_from_query_parameters(self):
-        """Tests that Sydent correctly extracts an auth token from query parameters"""
-        self.sydent.run()
 
-        request, _ = make_request(
-            self.sydent.reactor,
-            self.sydent.clientApiHttpServer.factory,
-            "GET",
-            "/_matrix/identity/v2/hash_details?access_token=" + self.test_token,
-        )
+async def test_can_read_token_from_query_parameters(client, sydent_with_token):
+    """Tests that Sydent correctly extracts an auth token from query parameters"""
+    _, test_token = sydent_with_token
 
-        token = tokenFromRequest(request)
-
-        self.assertEqual(token, self.test_token)
+    resp = await client.get(
+        f"/_matrix/identity/v2/hash_details?access_token={test_token}",
+    )
+    assert resp.status == 200

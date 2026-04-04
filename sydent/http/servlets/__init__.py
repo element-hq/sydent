@@ -88,7 +88,7 @@ async def get_args(
             body = await request.read()
             request_args = json_decoder.decode(body.decode("UTF-8"))
         except ValueError:
-            raise MatrixRestError(400, "M_BAD_JSON", "Malformed JSON")
+            raise MatrixRestError(400, "M_BAD_JSON", "Malformed JSON") from None
 
     # If we didn't get anything from that, and it's a v1 api path, try the request args
     if request_args is None and (v1_path or request.method == "GET"):
@@ -135,7 +135,8 @@ async def matrix_error_middleware(
 ) -> web.StreamResponse:
     """Middleware that catches MatrixRestError and returns JSON error responses."""
     try:
-        return await handler(request)
+        response: web.StreamResponse = await handler(request)
+        return response
     except MatrixRestError as e:
         return json_response(
             {"errcode": e.errcode, "error": e.error},
@@ -162,7 +163,7 @@ async def cors_middleware(
         send_cors(resp)
         return resp
 
-    response = await handler(request)
+    response: web.StreamResponse = await handler(request)
     send_cors(response)
     return response
 
@@ -175,4 +176,5 @@ async def metrics_middleware(
     """Middleware that counts requests per handler."""
     name = getattr(handler, "__name__", handler.__class__.__name__)
     request_counter.labels(name, request.method).inc()
-    return await handler(request)
+    response: web.StreamResponse = await handler(request)
+    return response

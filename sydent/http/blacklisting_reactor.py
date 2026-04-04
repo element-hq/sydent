@@ -11,6 +11,7 @@ import logging
 from typing import Any
 
 import aiohttp.resolver
+from aiohttp.abc import AbstractResolver, ResolveResult
 from netaddr import IPAddress, IPSet
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ def check_against_blacklist(
     return False
 
 
-class BlacklistingResolver(aiohttp.resolver.AbstractResolver):
+class BlacklistingResolver(AbstractResolver):
     """Custom aiohttp resolver that filters out blacklisted IPs."""
 
     def __init__(
@@ -44,20 +45,22 @@ class BlacklistingResolver(aiohttp.resolver.AbstractResolver):
         ip_whitelist: IPSet | None,
         ip_blacklist: IPSet,
     ) -> None:
-        self._inner: aiohttp.resolver.DefaultResolver | None = None
+        self._inner: Any = None
         self._ip_whitelist = ip_whitelist
         self._ip_blacklist = ip_blacklist
 
-    def _get_inner(self) -> aiohttp.resolver.DefaultResolver:
+    def _get_inner(self) -> Any:
         if self._inner is None:
             self._inner = aiohttp.resolver.DefaultResolver()
         return self._inner
 
     async def resolve(
         self, host: str, port: int = 0, family: int = 0
-    ) -> list[dict[str, Any]]:
-        results = await self._get_inner().resolve(host, port, family)
-        filtered = []
+    ) -> list[ResolveResult]:
+        results: list[ResolveResult] = await self._get_inner().resolve(
+            host, port, family
+        )
+        filtered: list[ResolveResult] = []
         for r in results:
             ip = IPAddress(r["host"])
             if not check_against_blacklist(ip, self._ip_whitelist, self._ip_blacklist):

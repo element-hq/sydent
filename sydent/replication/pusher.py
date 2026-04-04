@@ -68,7 +68,11 @@ class Pusher:
             localPeer.lastId, None
         )
 
-        localPeer.pushUpdates(signedAssocs)
+        # LocalPeer.pushUpdates is async (to satisfy the parent Peer interface)
+        # but performs no actual I/O, so we schedule it as a task.
+        import asyncio
+
+        asyncio.get_event_loop().create_task(localPeer.pushUpdates(signedAssocs))
 
     async def scheduledPush(self) -> None:
         """Push pending updates to all known remote peers."""

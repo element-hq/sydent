@@ -9,9 +9,13 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import logging
+from typing import TYPE_CHECKING
 
 import phonenumbers
 from aiohttp import web
+
+if TYPE_CHECKING:
+    from sydent.sydent import Sydent
 
 from sydent.http.auth import authV2
 from sydent.http.servlets import get_args, json_response
@@ -171,7 +175,7 @@ async def handle_msisdn_validate_code_post(
 
 
 async def _do_msisdn_validate_request(
-    sydent: "object", request: web.Request
+    sydent: "Sydent", request: web.Request
 ) -> JsonDict:
     """
     Extracts information about a validation session from the request and

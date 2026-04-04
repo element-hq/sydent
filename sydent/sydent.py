@@ -193,7 +193,7 @@ class Sydent:
             request.transport.get_extra_info("peername") if request.transport else None
         )
         if peername is not None:
-            return peername[0]
+            return str(peername[0])
         return None
 
     def brand_from_request(self, request: web.Request) -> str | None:

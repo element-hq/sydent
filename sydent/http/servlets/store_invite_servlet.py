@@ -13,10 +13,14 @@ import re
 import string
 from email.header import Header
 from http import HTTPStatus
+from typing import TYPE_CHECKING
 
 import nacl.signing
 from aiohttp import web
 from unpaddedbase64 import encode_base64
+
+if TYPE_CHECKING:
+    from sydent.sydent import Sydent
 
 from sydent.db.invite_tokens import JoinTokenStore
 from sydent.db.threepid_associations import GlobalAssociationStore
@@ -53,7 +57,7 @@ def _redact(s: str, characters_to_reveal: int) -> str:
     return s[:characters_to_reveal] + "..."
 
 
-def redact_email_address(sydent: "object", address: str) -> str:
+def redact_email_address(sydent: "Sydent", address: str) -> str:
     """
     Redacts the content of a 3PID address.
     """

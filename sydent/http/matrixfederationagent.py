@@ -334,7 +334,7 @@ def _cache_period_from_headers(
     if expires_header is not None:
         try:
             expires_date = parsedate_to_datetime(expires_header)
-            return expires_date.timestamp() - time_now()
+            return float(expires_date.timestamp() - time_now())
         except (ValueError, TypeError):
             # RFC7234 says 'A cache recipient MUST interpret invalid date formats,
             # especially the value "0", as representing a time in the past (i.e.,

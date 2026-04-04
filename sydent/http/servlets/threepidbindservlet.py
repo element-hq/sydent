@@ -57,19 +57,19 @@ async def handle_threepid_bind_post(
             404,
             "M_NO_VALID_SESSION",
             "No valid session was found matching that sid and client secret",
-        )
+        ) from None
     except SessionExpiredException:
         raise MatrixRestError(
             400,
             "M_SESSION_EXPIRED",
             "This validation session has expired: call requestToken again",
-        )
+        ) from None
     except SessionNotValidatedException:
         raise MatrixRestError(
             400,
             "M_SESSION_NOT_VALIDATED",
             "This validation session has not yet been completed",
-        )
+        ) from None
 
     res = sydent.threepidBinder.addBinding(s.medium, s.address, mxid)
     return json_response(res)

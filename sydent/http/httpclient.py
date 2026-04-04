@@ -29,7 +29,9 @@ logger = logging.getLogger(__name__)
 class HTTPClient:
     """A base HTTP client using aiohttp.ClientSession."""
 
-    session: aiohttp.ClientSession
+    @property
+    def session(self) -> aiohttp.ClientSession:
+        raise NotImplementedError
 
     async def get_json(self, uri: str, max_size: int | None = None) -> JsonDict:
         """Make a GET request to an endpoint returning JSON and parse result.

@@ -52,7 +52,7 @@ def sendEmail(
     myHostname = sydent.config.email.host_name
 
     midRandom = "".join([random.choice(string.ascii_letters) for _ in range(16)])
-    messageid = "<%d%s@%s>" % (time_msec(), midRandom, myHostname)
+    messageid = f"<{time_msec()}{midRandom}@{myHostname}>"
 
     substitutions.update(
         {
@@ -92,7 +92,7 @@ def sendEmail(
     mailPassword = sydent.config.email.smtp_password
     mailTLSMode = sydent.config.email.tls_mode
 
-    logger.info(f"Sending mail to {mailTo} with mail server: {mailServer}")
+    logger.info("Sending mail to %s with mail server: %s", mailTo, mailServer)
     try:
         smtp: smtplib.SMTP
         # Explicitly create a context, to ensure we verify the server's certificate

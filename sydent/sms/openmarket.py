@@ -108,21 +108,12 @@ class OpenMarketSMS:
         if resp.status < 200 or resp.status >= 300:
             if response_body is None or "error" not in response_body:
                 raise Exception(
-                    "OpenMarket API responded with status %d (request ID: %s)"
-                    % (
-                        resp.status,
-                        request_id,
-                    ),
+                    f"OpenMarket API responded with status {resp.status} (request ID: {request_id})",
                 )
 
             error = response_body["error"]
             raise Exception(
-                "OpenMarket API responded with status %d (request ID: %s): %s"
-                % (
-                    resp.status,
-                    request_id,
-                    error,
-                ),
+                f"OpenMarket API responded with status {resp.status} (request ID: {request_id}): {error}",
             )
 
         ticket_id = None

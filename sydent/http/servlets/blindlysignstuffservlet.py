@@ -52,6 +52,6 @@ async def handle_blindly_sign_stuff_post(
         signed = signedjson.sign.sign_json(to_sign, server_name, private_key)
     except Exception:
         logger.exception("signing failed")
-        raise MatrixRestError(500, "M_UNKNOWN", "Internal Server Error")
+        raise MatrixRestError(500, "M_UNKNOWN", "Internal Server Error") from None
 
     return json_response(signed)

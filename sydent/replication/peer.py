@@ -73,7 +73,7 @@ class LocalPeer(Peer[bool]):
         lastId = globalAssocStore.lastIdFromServer(self.servername)
         self.lastId = lastId if lastId is not None else -1
 
-    def pushUpdates(self, sgAssocs: SignedAssociations) -> bool:
+    async def pushUpdates(self, sgAssocs: SignedAssociations) -> bool:
         """
         Saves the given associations in the global associations store. Only
         stores an association if its ID is greater than the last seen ID.
@@ -144,7 +144,7 @@ class RemotePeer(Peer[aiohttp.ClientResponse]):
         if replication_url is None:
             if not port:
                 port = 1001
-            replication_url = "https://%s:%i" % (server_name, port)
+            replication_url = f"https://{server_name}:{port}"
 
         if replication_url[-1:] != "/":
             replication_url += "/"
@@ -176,7 +176,7 @@ class RemotePeer(Peer[aiohttp.ClientResponse]):
             except Exception as e:
                 raise ConfigError(
                     f"Unable to decode public key for peer {server_name}: {e}",
-                )
+                ) from e
 
         self.verify_key = signedjson.key.decode_verify_key_bytes(
             SIGNING_KEY_ALGORITHM + ":", pubkey_decoded
@@ -236,9 +236,8 @@ class RemotePeer(Peer[aiohttp.ClientResponse]):
             raise RemotePeerError(errObj)
         except (ValueError, UnicodeDecodeError):
             raise Exception(
-                "Push to %s failed with status %d"
-                % (self.replication_url, response.status)
-            )
+                f"Push to {self.replication_url} failed with status {response.status}"
+            ) from None
 
 
 class NoSignaturesException(Exception):

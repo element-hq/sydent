@@ -6,117 +6,99 @@
 #
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
-from http import HTTPStatus
+
 from json import JSONDecodeError
 from unittest.mock import patch
 
-import twisted.internet.error
-import twisted.web.client
-from parameterized import parameterized
-from twisted.trial import unittest
+import pytest
+from aiohttp.test_utils import TestClient, TestServer
 
-from tests.utils import make_request, make_sydent
+from tests.utils import make_sydent
 
 
-class RegisterTestCase(unittest.TestCase):
-    """Tests Sydent's register servlet"""
+@pytest.fixture
+def sydent():
+    return make_sydent()
 
-    def setUp(self) -> None:
-        # Create a new sydent
-        self.sydent = make_sydent()
 
-    def test_sydent_rejects_invalid_hostname(self) -> None:
-        """Tests that the /register endpoint rejects an invalid hostname passed as matrix_server_name"""
-        self.sydent.run()
+@pytest.fixture
+async def client(sydent):
+    app = sydent.clientApiHttpServer.app
+    async with TestClient(TestServer(app)) as client:
+        yield client
 
-        bad_hostname = "example.com#"
 
-        request, channel = make_request(
-            self.sydent.reactor,
-            self.sydent.clientApiHttpServer.factory,
-            "POST",
-            "/_matrix/identity/v2/account/register",
-            content={"matrix_server_name": bad_hostname, "access_token": "foo"},
-        )
+async def test_sydent_rejects_invalid_hostname(client):
+    """Tests that the /register endpoint rejects an invalid hostname passed as matrix_server_name."""
+    bad_hostname = "example.com#"
 
-        self.assertEqual(channel.code, 400)
-
-    @parameterized.expand(
-        [
-            (twisted.internet.error.DNSLookupError(),),
-            (twisted.internet.error.TimeoutError(),),
-            (twisted.internet.error.ConnectionRefusedError(),),
-            # Naughty: strictly we're supposed to initialise a ResponseNeverReceived
-            # with a list of 1 or more failures.
-            (twisted.web.client.ResponseNeverReceived([]),),
-        ]
+    resp = await client.post(
+        "/_matrix/identity/v2/account/register",
+        json={"matrix_server_name": bad_hostname, "access_token": "foo"},
     )
-    def test_connection_failure(self, exc: Exception) -> None:
-        self.sydent.run()
-        with patch(
-            "sydent.http.httpclient.FederationHttpClient.get_json", side_effect=exc
-        ):
-            request, channel = make_request(
-                self.sydent.reactor,
-                self.sydent.clientApiHttpServer.factory,
-                "POST",
-                "/_matrix/identity/v2/account/register",
-                content={
-                    "matrix_server_name": "matrix.alice.com",
-                    "access_token": "back_in_wonderland",
-                },
-            )
-        self.assertEqual(channel.code, HTTPStatus.INTERNAL_SERVER_ERROR)
-        self.assertEqual(channel.json_body["errcode"], "M_UNKNOWN")
-        # Check that we haven't just returned the generic error message in asyncjsonwrap
-        self.assertNotEqual(channel.json_body["error"], "Internal Server Error")
-        self.assertIn("contact", channel.json_body["error"])
 
-    def test_federation_does_not_return_json(self) -> None:
-        self.sydent.run()
-        exc = JSONDecodeError("ruh roh", "C'est n'est pas une objet JSON", 0)
-        with patch(
-            "sydent.http.httpclient.FederationHttpClient.get_json", side_effect=exc
-        ):
-            request, channel = make_request(
-                self.sydent.reactor,
-                self.sydent.clientApiHttpServer.factory,
-                "POST",
-                "/_matrix/identity/v2/account/register",
-                content={
-                    "matrix_server_name": "matrix.alice.com",
-                    "access_token": "back_in_wonderland",
-                },
-            )
-        self.assertEqual(channel.code, HTTPStatus.INTERNAL_SERVER_ERROR)
-        self.assertEqual(channel.json_body["errcode"], "M_UNKNOWN")
-        # Check that we haven't just returned the generic error message in asyncjsonwrap
-        self.assertNotEqual(channel.json_body["error"], "Internal Server Error")
-        self.assertIn("JSON", channel.json_body["error"])
+    assert resp.status == 400
 
 
-class RegisterAllowListTestCase(unittest.TestCase):
-    """
-    Test registering works with the `homeserver_allow_list` config option specified
-    """
-
-    def test_registering_not_allowed_if_homeserver_not_in_allow_list(self) -> None:
-        config = {
-            "general": {
-                "homeserver_allow_list": "friendly.com, example.com",
-                "enable_v1_access": "false",
-            }
-        }
-        # Create a new sydent with a homeserver_allow_list specified
-        self.sydent = make_sydent(test_config=config)
-        self.sydent.run()
-
-        request, channel = make_request(
-            self.sydent.reactor,
-            self.sydent.clientApiHttpServer.factory,
-            "POST",
+@pytest.mark.parametrize(
+    "exc",
+    [
+        ConnectionRefusedError(),
+        OSError("DNS lookup failed"),
+        TimeoutError(),
+    ],
+)
+async def test_connection_failure(exc, client):
+    with patch("sydent.http.httpclient.FederationHttpClient.get_json", side_effect=exc):
+        resp = await client.post(
             "/_matrix/identity/v2/account/register",
-            content={"matrix_server_name": "not.example.com", "access_token": "foo"},
+            json={
+                "matrix_server_name": "matrix.alice.com",
+                "access_token": "back_in_wonderland",
+            },
         )
-        self.assertEqual(channel.code, 403)
-        self.assertEqual(channel.json_body["errcode"], "M_UNAUTHORIZED")
+    assert resp.status == 500
+    body = await resp.json()
+    assert body["errcode"] == "M_UNKNOWN"
+    # Check that we haven't just returned the generic error message
+    assert body["error"] != "Internal Server Error"
+    assert "contact" in body["error"]
+
+
+async def test_federation_does_not_return_json(client):
+    exc = JSONDecodeError("ruh roh", "C'est n'est pas une objet JSON", 0)
+    with patch("sydent.http.httpclient.FederationHttpClient.get_json", side_effect=exc):
+        resp = await client.post(
+            "/_matrix/identity/v2/account/register",
+            json={
+                "matrix_server_name": "matrix.alice.com",
+                "access_token": "back_in_wonderland",
+            },
+        )
+    assert resp.status == 500
+    body = await resp.json()
+    assert body["errcode"] == "M_UNKNOWN"
+    # Check that we haven't just returned the generic error message
+    assert body["error"] != "Internal Server Error"
+    assert "JSON" in body["error"]
+
+
+async def test_registering_not_allowed_if_homeserver_not_in_allow_list():
+    """Test registering works with the homeserver_allow_list config option specified."""
+    config = {
+        "general": {
+            "homeserver_allow_list": "friendly.com, example.com",
+            "enable_v1_access": "false",
+        }
+    }
+    sydent = make_sydent(test_config=config)
+
+    app = sydent.clientApiHttpServer.app
+    async with TestClient(TestServer(app)) as client:
+        resp = await client.post(
+            "/_matrix/identity/v2/account/register",
+            json={"matrix_server_name": "not.example.com", "access_token": "foo"},
+        )
+        assert resp.status == 403
+        body = await resp.json()
+        assert body["errcode"] == "M_UNAUTHORIZED"

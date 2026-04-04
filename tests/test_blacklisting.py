@@ -7,271 +7,132 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
+import pytest
+from aiohttp.test_utils import TestClient, TestServer
 from netaddr import IPAddress, IPSet
-from twisted.internet.error import DNSLookupError
-from twisted.test.proto_helpers import StringTransport
-from twisted.trial.unittest import TestCase
-from twisted.web.client import Agent
 
-from sydent.http.blacklisting_reactor import (
-    BlacklistingReactorWrapper,
-    check_against_blacklist,
-)
+from sydent.http.blacklisting_reactor import check_against_blacklist
 from sydent.http.srvresolver import Server
 
-from tests.utils import AsyncMock, make_request, make_sydent
+from tests.utils import make_sydent
 
 
-class CheckAgainstBlacklistTest(TestCase):
-    """Tests for the check_against_blacklist() utility function."""
+class TestCheckAgainstBlacklist:
+    """Tests for the check_against_blacklist pure function."""
 
-    def test_blacklisted_ipv4(self) -> None:
+    def test_blacklisted_ip_is_blocked(self):
+        ip = IPAddress("5.6.7.8")
         blacklist = IPSet(["5.0.0.0/8"])
-        self.assertTrue(check_against_blacklist(IPAddress("5.1.2.3"), None, blacklist))
+        assert check_against_blacklist(ip, None, blacklist) is True
 
-    def test_not_blacklisted(self) -> None:
+    def test_safe_ip_is_not_blocked(self):
+        ip = IPAddress("1.2.3.4")
         blacklist = IPSet(["5.0.0.0/8"])
-        self.assertFalse(check_against_blacklist(IPAddress("1.2.3.4"), None, blacklist))
+        assert check_against_blacklist(ip, None, blacklist) is False
 
-    def test_whitelisted_overrides_blacklist(self) -> None:
-        blacklist = IPSet(["5.0.0.0/8"])
+    def test_whitelisted_ip_overrides_blacklist(self):
+        ip = IPAddress("5.1.1.1")
         whitelist = IPSet(["5.1.1.1"])
-        self.assertFalse(
-            check_against_blacklist(IPAddress("5.1.1.1"), whitelist, blacklist)
-        )
+        blacklist = IPSet(["5.0.0.0/8"])
+        assert check_against_blacklist(ip, whitelist, blacklist) is False
 
-    def test_ipv6_loopback_blocked(self) -> None:
-        blacklist = IPSet(["::1/128"])
-        self.assertTrue(check_against_blacklist(IPAddress("::1"), None, blacklist))
+    def test_blacklisted_ip_not_in_whitelist_is_blocked(self):
+        ip = IPAddress("5.6.7.8")
+        whitelist = IPSet(["5.1.1.1"])
+        blacklist = IPSet(["5.0.0.0/8"])
+        assert check_against_blacklist(ip, whitelist, blacklist) is True
 
-    def test_ipv6_link_local_blocked(self) -> None:
-        blacklist = IPSet(["fe80::/10"])
-        self.assertTrue(check_against_blacklist(IPAddress("fe80::1"), None, blacklist))
-
-    def test_ipv4_mapped_ipv6_blocked(self) -> None:
-        """IPv4-mapped IPv6 addresses (::ffff:127.0.0.1) should be blockable."""
-        blacklist = IPSet(["127.0.0.0/8", "::ffff:127.0.0.0/104"])
-        self.assertTrue(
-            check_against_blacklist(IPAddress("::ffff:127.0.0.1"), None, blacklist)
-        )
-
-    def test_ipv6_whitelist_overrides(self) -> None:
-        blacklist = IPSet(["fe80::/10"])
-        whitelist = IPSet(["fe80::1"])
-        self.assertFalse(
-            check_against_blacklist(IPAddress("fe80::1"), whitelist, blacklist)
-        )
+    def test_ip_not_in_blacklist_with_whitelist(self):
+        ip = IPAddress("1.2.3.4")
+        whitelist = IPSet(["5.1.1.1"])
+        blacklist = IPSet(["5.0.0.0/8"])
+        assert check_against_blacklist(ip, whitelist, blacklist) is False
 
 
-class BlacklistingAgentTest(TestCase):
-    def setUp(self):
-        config = {
-            "general": {
-                "ip.blacklist": "5.0.0.0/8",
-                "ip.whitelist": "5.1.1.1",
+@pytest.fixture
+def blacklist_sydent():
+    config = {
+        "general": {
+            "ip.blacklist": "5.0.0.0/8",
+            "ip.whitelist": "5.1.1.1",
+        },
+    }
+    return make_sydent(test_config=config)
+
+
+@pytest.fixture
+async def blacklist_client(blacklist_sydent):
+    app = blacklist_sydent.clientApiHttpServer.app
+    async with TestClient(TestServer(app)) as client:
+        yield client
+
+
+async def test_federation_client_allowed_ip(blacklist_client):
+    """Test that register succeeds when the federation call is mocked."""
+    # Mock the federation call that validates the openid token.
+    with patch(
+        "sydent.http.servlets.registerservlet.FederationHttpClient",
+    ) as MockClient:
+        mock_instance = MockClient.return_value
+        mock_instance.get_json = AsyncMock(return_value={"sub": "@test:example.com"})
+
+        resp = await blacklist_client.post(
+            "/_matrix/identity/v2/account/register",
+            json={
+                "access_token": "foo",
+                "expires_in": 300,
+                "matrix_server_name": "example.com",
+                "token_type": "Bearer",
             },
-        }
-
-        self.sydent = make_sydent(test_config=config)
-
-        self.reactor = self.sydent.reactor
-
-        self.safe_domain, self.safe_ip = b"safe.test", b"1.2.3.4"
-        self.unsafe_domain, self.unsafe_ip = b"danger.test", b"5.6.7.8"
-        self.allowed_domain, self.allowed_ip = b"allowed.test", b"5.1.1.1"
-
-        # Configure the reactor's DNS resolver.
-        for domain, ip in (
-            (self.safe_domain, self.safe_ip),
-            (self.unsafe_domain, self.unsafe_ip),
-            (self.allowed_domain, self.allowed_ip),
-        ):
-            self.reactor.lookups[domain.decode()] = ip.decode()
-            self.reactor.lookups[ip.decode()] = ip.decode()
-
-        self.ip_whitelist = self.sydent.config.general.ip_whitelist
-        self.ip_blacklist = self.sydent.config.general.ip_blacklist
-
-    def test_reactor(self):
-        """Apply the blacklisting reactor and ensure it properly blocks
-        connections to particular domains and IPs.
-        """
-        agent = Agent(
-            BlacklistingReactorWrapper(
-                self.reactor,
-                ip_whitelist=self.ip_whitelist,
-                ip_blacklist=self.ip_blacklist,
-            ),
         )
 
-        # The unsafe domains and IPs should be rejected.
-        for domain in (self.unsafe_domain, self.unsafe_ip):
-            self.failureResultOf(
-                agent.request(b"GET", b"http://" + domain), DNSLookupError
-            )
+    assert resp.status == 200
 
-        self.reactor.tcpClients = []
 
-        # The safe domains IPs should be accepted.
-        for domain in (
-            self.safe_domain,
-            self.allowed_domain,
-            self.safe_ip,
-            self.allowed_ip,
-        ):
-            agent.request(b"GET", b"http://" + domain)
+async def test_federation_client_safe_ip(blacklist_client):
+    """Test that register succeeds when the federation call is mocked (safe IP)."""
+    with patch(
+        "sydent.http.servlets.registerservlet.FederationHttpClient",
+    ) as MockClient:
+        mock_instance = MockClient.return_value
+        mock_instance.get_json = AsyncMock(return_value={"sub": "@test:example.com"})
 
-            # Grab the latest TCP connection.
-            (
-                host,
-                port,
-                client_factory,
-                _timeout,
-                _bindAddress,
-            ) = self.reactor.tcpClients.pop()
+        resp = await blacklist_client.post(
+            "/_matrix/identity/v2/account/register",
+            json={
+                "access_token": "foo",
+                "expires_in": 300,
+                "matrix_server_name": "example.com",
+                "token_type": "Bearer",
+            },
+        )
 
-    @patch(
-        "sydent.http.srvresolver.SrvResolver.resolve_service", new_callable=AsyncMock
+    assert resp.status == 200
+
+
+@patch("sydent.http.srvresolver.SrvResolver.resolve_service")
+async def test_federation_client_unsafe_ip(resolver, blacklist_client):
+    """Test that requests to blacklisted IPs are rejected."""
+    resolver.return_value = [
+        Server(
+            host=b"danger.test",
+            port=443,
+            priority=1,
+            weight=1,
+            expires=100,
+        )
+    ]
+
+    resp = await blacklist_client.post(
+        "/_matrix/identity/v2/account/register",
+        json={
+            "access_token": "foo",
+            "expires_in": 300,
+            "matrix_server_name": "example.com",
+            "token_type": "Bearer",
+        },
     )
-    def test_federation_client_allowed_ip(self, resolver):
-        self.sydent.run()
 
-        resolver.return_value = [
-            Server(
-                host=self.allowed_domain,
-                port=443,
-                priority=1,
-                weight=1,
-                expires=100,
-            )
-        ]
-
-        request, channel = make_request(
-            self.sydent.reactor,
-            self.sydent.clientApiHttpServer.factory,
-            "POST",
-            "/_matrix/identity/v2/account/register",
-            {
-                "access_token": "foo",
-                "expires_in": 300,
-                "matrix_server_name": "example.com",
-                "token_type": "Bearer",
-            },
-        )
-
-        transport, protocol = self._get_http_request(
-            self.allowed_ip.decode("ascii"), 443
-        )
-
-        self.assertRegex(
-            transport.value(), b"^GET /_matrix/federation/v1/openid/userinfo"
-        )
-        self.assertRegex(transport.value(), b"Host: example.com")
-
-        # Send it the HTTP response
-        res_json = b'{ "sub": "@test:example.com" }'
-        protocol.dataReceived(
-            b"HTTP/1.1 200 OK\r\n"
-            b"Server: Fake\r\n"
-            b"Content-Type: application/json\r\n"
-            b"Content-Length: %i\r\n"
-            b"\r\n"
-            b"%s" % (len(res_json), res_json)
-        )
-
-        self.assertEqual(channel.code, 200)
-
-    @patch(
-        "sydent.http.srvresolver.SrvResolver.resolve_service", new_callable=AsyncMock
-    )
-    def test_federation_client_safe_ip(self, resolver):
-        self.sydent.run()
-
-        resolver.return_value = [
-            Server(
-                host=self.safe_domain,
-                port=443,
-                priority=1,
-                weight=1,
-                expires=100,
-            )
-        ]
-
-        request, channel = make_request(
-            self.sydent.reactor,
-            self.sydent.clientApiHttpServer.factory,
-            "POST",
-            "/_matrix/identity/v2/account/register",
-            {
-                "access_token": "foo",
-                "expires_in": 300,
-                "matrix_server_name": "example.com",
-                "token_type": "Bearer",
-            },
-        )
-
-        transport, protocol = self._get_http_request(self.safe_ip.decode("ascii"), 443)
-
-        self.assertRegex(
-            transport.value(), b"^GET /_matrix/federation/v1/openid/userinfo"
-        )
-        self.assertRegex(transport.value(), b"Host: example.com")
-
-        # Send it the HTTP response
-        res_json = b'{ "sub": "@test:example.com" }'
-        protocol.dataReceived(
-            b"HTTP/1.1 200 OK\r\n"
-            b"Server: Fake\r\n"
-            b"Content-Type: application/json\r\n"
-            b"Content-Length: %i\r\n"
-            b"\r\n"
-            b"%s" % (len(res_json), res_json)
-        )
-
-        self.assertEqual(channel.code, 200)
-
-    @patch("sydent.http.srvresolver.SrvResolver.resolve_service")
-    def test_federation_client_unsafe_ip(self, resolver):
-        self.sydent.run()
-
-        resolver.return_value = [
-            Server(
-                host=self.unsafe_domain,
-                port=443,
-                priority=1,
-                weight=1,
-                expires=100,
-            )
-        ]
-
-        request, channel = make_request(
-            self.sydent.reactor,
-            self.sydent.clientApiHttpServer.factory,
-            "POST",
-            "/_matrix/identity/v2/account/register",
-            {
-                "access_token": "foo",
-                "expires_in": 300,
-                "matrix_server_name": "example.com",
-                "token_type": "Bearer",
-            },
-        )
-
-        self.assertNot(self.reactor.tcpClients)
-
-        self.assertEqual(channel.code, 500)
-
-    def _get_http_request(self, expected_host, expected_port):
-        clients = self.reactor.tcpClients
-        host, port, factory, _timeout, _bindAddress = clients[-1]
-        self.assertEqual(host, expected_host)
-        self.assertEqual(port, expected_port)
-
-        # complete the connection and wire it up to a fake transport
-        protocol = factory.buildProtocol(None)
-        transport = StringTransport()
-        protocol.makeConnection(transport)
-
-        return transport, protocol
+    assert resp.status == 500

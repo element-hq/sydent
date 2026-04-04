@@ -73,14 +73,31 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.10', '3.13']
-        test-dir: ['tests', 'matrix_is_tester']
 
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: uv run trial ${{ matrix.test-dir }}
+      - run: uv run pytest tests/
+
+  # matrix_is_tester is a black-box integration test suite that launches
+  # Sydent as a subprocess and makes HTTP requests against it.
+  run-integration-tests:
+    name: Integration Tests
+    if: ${{ !cancelled() && !failure() }}
+    needs: [check-newsfile, checks]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.13']
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv run pytest --pyargs matrix_is_tester
 
   # a job which runs once all the other jobs are complete, thus allowing PRs to
   # be merged.
@@ -90,6 +107,7 @@ jobs:
       - check-newsfile
       - checks
       - run-tests
+      - run-integration-tests
     runs-on: ubuntu-latest
     steps:
       - uses: matrix-org/done-action@v3

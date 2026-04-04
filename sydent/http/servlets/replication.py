@@ -85,7 +85,7 @@ async def handle_replication_push_post(request: web.Request) -> web.Response:
         logger.warning(
             "Peer %s made push connection with malformed JSON", peer.servername
         )
-        raise MatrixRestError(400, "M_BAD_JSON", "Malformed JSON")
+        raise MatrixRestError(400, "M_BAD_JSON", "Malformed JSON") from None
 
     if "sgAssocs" not in inJson:
         logger.warning(
