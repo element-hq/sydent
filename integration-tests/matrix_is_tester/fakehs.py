@@ -20,9 +20,9 @@ import json
 import os
 import random
 import ssl
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from multiprocessing import Process
-
-from six.moves import BaseHTTPServer, urllib
+from urllib.parse import parse_qs, urlparse
 
 shared_fake_hs = None
 
@@ -61,11 +61,11 @@ def _destroy_shared():
     shared_fake_hs.tearDown()
 
 
-class _FakeHomeserverRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class _FakeHomeserverRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/_matrix/federation/v1/openid/userinfo"):
-            parsed = urllib.parse.urlparse(self.path)
-            params = urllib.parse.parse_qs(parsed.query)
+            parsed = urlparse(self.path)
+            params = parse_qs(parsed.query)
 
             token = params["access_token"][0]
 
@@ -94,7 +94,7 @@ class _FakeHomeserverRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         else:
             self.send_response(404)
             self.end_headers()
-            self.wfile.write("Not found")
+            self.wfile.write(b"Not found")
 
     def log_message(self, fmt, *args):
         # don't print to stdout: it screws up the test output (and we don't really care)
@@ -104,14 +104,14 @@ class _FakeHomeserverRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 def _run_http_server():
     cert_file = os.path.join(os.path.dirname(__file__), "fakehs.pem")
 
-    httpd = BaseHTTPServer.HTTPServer(
-        ("127.0.00.1", 4490), _FakeHomeserverRequestHandler
-    )
-    httpd.socket = ssl.wrap_socket(httpd.socket, certfile=cert_file, server_side=True)
+    httpd = HTTPServer(("127.0.0.1", 4490), _FakeHomeserverRequestHandler)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(cert_file)
+    httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
     httpd.serve_forever()
 
 
-class FakeHomeserver(object):
+class FakeHomeserver:
     """
     A class that spawns an HTTP server that looks like a Matrix Homeserver.
     Currently just implements the federation OpenID endpoint to validate OpenID tokens.

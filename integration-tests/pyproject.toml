@@ -13,7 +13,6 @@ license-files = ["LICENSE"]
 dependencies = [
     "Twisted>=19.2.1",
     "requests>=2.22.0",
-    "six>=1.13.0",
 ]
 
 [tool.uv.build-backend]
