@@ -2,6 +2,12 @@ version = 1
 revision = 3
 requires-python = ">=3.10, <4"
 
+[manifest]
+members = [
+    "matrix-is-tester",
+    "matrix-sydent",
+]
+
 [[package]]
 name = "attrs"
 version = "26.1.0"
@@ -610,12 +616,19 @@ wheels = [
 
 [[package]]
 name = "matrix-is-tester"
-version = "0.1"
-source = { git = "https://github.com/matrix-org/matrix-is-tester?rev=main#cfc3bf0b998c5d0ae91d0f2f4f6cb007a18833aa" }
+version = "0.1.0"
+source = { editable = "integration-tests" }
 dependencies = [
     { name = "requests" },
     { name = "six" },
     { name = "twisted" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "requests", specifier = ">=2.22.0" },
+    { name = "six", specifier = ">=1.13.0" },
+    { name = "twisted", specifier = ">=19.2.1" },
 ]
 
 [[package]]
@@ -691,7 +704,7 @@ provides-extras = ["sentry", "prometheus"]
 dev = [
     { name = "black", specifier = ">=23.1.0" },
     { name = "isort", specifier = "==5.8.0" },
-    { name = "matrix-is-tester", git = "https://github.com/matrix-org/matrix-is-tester?rev=main" },
+    { name = "matrix-is-tester", editable = "integration-tests" },
     { name = "mypy", specifier = ">=0.902" },
     { name = "mypy-zope", specifier = ">=0.3.1" },
     { name = "parameterized", specifier = "==0.8.1" },

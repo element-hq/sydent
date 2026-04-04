@@ -18,6 +18,7 @@ from scripts.casefold_db import (
 )
 from sydent.util import json_decoder
 from sydent.util.emailutils import sendEmail
+
 from tests.utils import make_sydent
 
 

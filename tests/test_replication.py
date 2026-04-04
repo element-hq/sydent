@@ -7,6 +7,7 @@ from twisted.web.client import Response
 
 from sydent.threepid import ThreepidAssociation
 from sydent.threepid.signer import Signer
+
 from tests.utils import make_request, make_sydent
 
 

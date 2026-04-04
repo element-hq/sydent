@@ -12,6 +12,7 @@ from parameterized import parameterized
 from twisted.trial import unittest
 
 from sydent.users.accounts import Account
+
 from tests.utils import make_request, make_sydent
 
 

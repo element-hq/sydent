@@ -10,6 +10,7 @@
 from twisted.trial import unittest
 
 from sydent.http.auth import tokenFromRequest
+
 from tests.utils import make_request, make_sydent
 
 

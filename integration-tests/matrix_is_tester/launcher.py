@@ -50,15 +50,19 @@ class MatrixIsTestLauncher:
         self.with_terms = with_terms
 
     def launch(self):
+        # integration-tests/matrix_is_test/launcher.py → repo root is ../../
         sydent_path = os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
                 "..",
+                "..",
             )
         )
-        testsubject_path = os.path.join(
-            sydent_path,
-            "matrix_is_test",
+        # Templates and terms live alongside this file
+        testsubject_path = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+            )
         )
         terms_path = (
             os.path.join(testsubject_path, "terms.yaml") if self.with_terms else ""
@@ -76,21 +80,11 @@ class MatrixIsTestLauncher:
                 )
             )
 
-        newEnv = os.environ.copy()
-        newEnv.update(
-            {
-                "PYTHONPATH": sydent_path,
-            }
-        )
-
-        stderr_fp = open(os.path.join(testsubject_path, "sydent.stderr"), "w")
-
-        pybin = os.getenv("SYDENT_PYTHON", "python")
+        stderr_fp = open(os.path.join(self.tmpdir, "sydent.stderr"), "w")
 
         self.process = Popen(
-            args=[pybin, "-m", "sydent.sydent"],
+            args=["uv", "run", "--project", sydent_path, "sydent"],
             cwd=self.tmpdir,
-            env=newEnv,
             stderr=stderr_fp,
         )
         # XXX: wait for startup in a sensible way
