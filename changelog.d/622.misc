@@ -1,0 +1,1 @@
+Move the black-box integration tests from the external matrix-is-tester repository into `integration-tests/`.

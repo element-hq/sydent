@@ -51,9 +51,7 @@ dev = [
     "black",
     "ruff",
     "isort",
-    # Later revisions add test_versions, which requests /versions rather than
-    # /_matrix/identity/versions and so fails against Sydent.
-    "matrix-is-tester @ git+https://github.com/matrix-org/matrix-is-tester@c87641b9866b5fd6d648d829283c18fbb06d1bbe",
+    "matrix-is-tester",
     "mypy",
     "mypy-zope",
     "parameterized",
@@ -66,6 +64,12 @@ dev = [
     "towncrier",
 ]
 
+[tool.uv.workspace]
+members = ["integration-tests"]
+
+[tool.uv.sources]
+matrix-is-tester = { workspace = true }
+
 [tool.uv.build-backend]
 module-name = "sydent"
 module-root = ""
@@ -73,7 +77,7 @@ source-include = [
     "matrix-sydent.service",
     "res/**",
     "scripts/**",
-    "matrix_is_test/**",
+    "integration-tests/**",
     "scripts-dev/**",
     "tests/**",
 ]
@@ -116,6 +120,7 @@ source-include = [
 
 [tool.isort]
 profile = "black"
+known_first_party = ["matrix_is_tester"]
 
 [tool.black]
 target-version = ['py311']
