@@ -35,7 +35,7 @@ class TermsTest(unittest.TestCase):
         body = api.get_terms()
         self.assertIn("policies", body)
         self.assertIn("privacy_policy", body["policies"])
-        self.assertEquals(body["policies"]["privacy_policy"]["version"], "1.2")
+        self.assertEqual(body["policies"]["privacy_policy"]["version"], "1.2")
         self.assertIn("en", body["policies"]["privacy_policy"])
         self.assertIn("name", body["policies"]["privacy_policy"]["en"])
         self.assertIn("url", body["policies"]["privacy_policy"]["en"])
@@ -44,7 +44,7 @@ class TermsTest(unittest.TestCase):
         self.assertIn("url", body["policies"]["privacy_policy"]["fr"])
 
         self.assertIn("terms_of_service", body["policies"])
-        self.assertEquals(body["policies"]["terms_of_service"]["version"], "5.0")
+        self.assertEqual(body["policies"]["terms_of_service"]["version"], "5.0")
         self.assertIn("en", body["policies"]["terms_of_service"])
         self.assertIn("name", body["policies"]["terms_of_service"]["en"])
         self.assertIn("url", body["policies"]["terms_of_service"]["en"])
@@ -68,7 +68,7 @@ class TermsTest(unittest.TestCase):
         api = IsApi(base_url, "v2", None)
 
         err = api.check_terms_signed()
-        self.assertEquals(err["errcode"], "M_UNAUTHORIZED")
+        self.assertEqual(err["errcode"], "M_UNAUTHORIZED")
 
     def test_terms_reject_if_none_agreed(self):
         base_url = get_or_launch_is(True)
@@ -76,7 +76,7 @@ class TermsTest(unittest.TestCase):
         api.make_account(self.fakeHsAddr)
 
         err = api.check_terms_signed()
-        self.assertEquals(err["errcode"], "M_TERMS_NOT_SIGNED")
+        self.assertEqual(err["errcode"], "M_TERMS_NOT_SIGNED")
 
     def test_terms_reject_if_not_all_agreed(self):
         base_url = get_or_launch_is(True)
@@ -87,7 +87,7 @@ class TermsTest(unittest.TestCase):
         api.agree_to_terms([terms_body["policies"]["privacy_policy"]["en"]["url"]])
 
         err = api.check_terms_signed()
-        self.assertEquals(err["errcode"], "M_TERMS_NOT_SIGNED")
+        self.assertEqual(err["errcode"], "M_TERMS_NOT_SIGNED")
 
     def test_terms_allow_when_all_agreed(self):
         base_url = get_or_launch_is(True)
@@ -139,7 +139,7 @@ class TermsTest(unittest.TestCase):
         api.make_account(self.fakeHsAddr)
 
         terms_body = api.get_terms()
-        self.assertEquals(terms_body["policies"], {})
+        self.assertEqual(terms_body["policies"], {})
 
     def test_terms_allow_if_no_terms(self):
         base_url = get_or_launch_is(False)
@@ -151,9 +151,4 @@ class TermsTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import sys
-
-    from twisted.python import log
-
-    log.startLogging(sys.stdout)
     unittest.main()

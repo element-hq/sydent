@@ -16,14 +16,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import random
 import re
 import string
 
 import requests
-from twisted.python import log
 
 from matrix_is_tester.fakehs import token_for_random_user
+
+logger = logging.getLogger(__name__)
 
 
 class IsApi(object):
@@ -69,7 +71,7 @@ class IsApi(object):
     def get_token_from_mail(self):
         mail = self.mail_sink.get_mail()
 
-        log.msg("Got email: %r" % (mail,))
+        logger.info("Got email: %r" % (mail,))
         if "data" not in mail:
             raise Exception("Mail has no 'data'")
 
@@ -120,7 +122,7 @@ class IsApi(object):
             headers=self.headers,
         )
         body = resp.json()
-        log.msg("submitToken returned %r" % (body,))
+        logger.info("submitToken returned %r" % (body,))
         if not body["success"]:
             raise Exception("Submit token failed")
         return {"sid": sid, "client_secret": client_secret}
@@ -180,7 +182,7 @@ class IsApi(object):
         return resp.json()
 
     def get_versions(self):
-        resp = requests.get(self.base_url + "/versions")
+        resp = requests.get(self.base_url + "/_matrix/identity/versions")
         return resp.json()
 
     def register(self, matrix_server_name, access_token):

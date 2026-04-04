@@ -35,13 +35,8 @@ class VersionsTest(unittest.TestCase):
         body = self.api.get_versions()
 
         self.assertIn("versions", body)
-        self.assertIn(["v1.1"], body["versions"])
+        self.assertIn("v1.1", body["versions"])
 
 
 if __name__ == "__main__":
-    import sys
-
-    from twisted.python import log
-
-    log.startLogging(sys.stdout)
     unittest.main()

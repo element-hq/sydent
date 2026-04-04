@@ -49,7 +49,7 @@ class V1Test(BaseApiTest, unittest.TestCase):
         self.assertIn(
             ["email", "thing2@nowhere.test", "@thing2:fake.test"], body["threepids"]
         )
-        self.assertEquals(len(body["threepids"]), 2)
+        self.assertEqual(len(body["threepids"]), 2)
 
     def test_bind_and_lookup(self):
         params = self.api.request_and_submit_email_code("fakeemail3@nowhere.test")
@@ -57,25 +57,20 @@ class V1Test(BaseApiTest, unittest.TestCase):
             params["sid"], params["client_secret"], "@some_mxid:fake.test"
         )
 
-        self.assertEquals(body["medium"], "email")
-        self.assertEquals(body["address"], "fakeemail3@nowhere.test")
-        self.assertEquals(body["mxid"], "@some_mxid:fake.test")
+        self.assertEqual(body["medium"], "email")
+        self.assertEqual(body["address"], "fakeemail3@nowhere.test")
+        self.assertEqual(body["mxid"], "@some_mxid:fake.test")
 
         body2 = self.api.lookupv1("email", "fakeemail3@nowhere.test")
 
-        self.assertEquals(body2["medium"], "email")
-        self.assertEquals(body2["address"], "fakeemail3@nowhere.test")
-        self.assertEquals(body2["mxid"], "@some_mxid:fake.test")
+        self.assertEqual(body2["medium"], "email")
+        self.assertEqual(body2["address"], "fakeemail3@nowhere.test")
+        self.assertEqual(body2["mxid"], "@some_mxid:fake.test")
 
-        self.assertEquals(body["ts"], body2["ts"])
-        self.assertEquals(body["not_before"], body2["not_before"])
-        self.assertEquals(body["not_after"], body2["not_after"])
+        self.assertEqual(body["ts"], body2["ts"])
+        self.assertEqual(body["not_before"], body2["not_before"])
+        self.assertEqual(body["not_after"], body2["not_after"])
 
 
 if __name__ == "__main__":
-    import sys
-
-    from twisted.python import log
-
-    log.startLogging(sys.stdout)
     unittest.main()

@@ -39,13 +39,8 @@ class AccountTest(unittest.TestCase):
         body = api.bind_email(
             params["sid"], params["client_secret"], "@alice:127.0.0.1:4490"
         )
-        self.assertEquals(body["errcode"], "M_UNAUTHORIZED")
+        self.assertEqual(body["errcode"], "M_UNAUTHORIZED")
 
 
 if __name__ == "__main__":
-    import sys
-
-    from twisted.python import log
-
-    log.startLogging(sys.stdout)
     unittest.main()
