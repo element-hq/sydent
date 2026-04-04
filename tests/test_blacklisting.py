@@ -9,15 +9,60 @@
 
 from unittest.mock import patch
 
+from netaddr import IPAddress, IPSet
 from twisted.internet.error import DNSLookupError
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 from twisted.web.client import Agent
 
-from sydent.http.blacklisting_reactor import BlacklistingReactorWrapper
+from sydent.http.blacklisting_reactor import (
+    BlacklistingReactorWrapper,
+    check_against_blacklist,
+)
 from sydent.http.srvresolver import Server
 
 from tests.utils import AsyncMock, make_request, make_sydent
+
+
+class CheckAgainstBlacklistTest(TestCase):
+    """Tests for the check_against_blacklist() utility function."""
+
+    def test_blacklisted_ipv4(self) -> None:
+        blacklist = IPSet(["5.0.0.0/8"])
+        self.assertTrue(check_against_blacklist(IPAddress("5.1.2.3"), None, blacklist))
+
+    def test_not_blacklisted(self) -> None:
+        blacklist = IPSet(["5.0.0.0/8"])
+        self.assertFalse(check_against_blacklist(IPAddress("1.2.3.4"), None, blacklist))
+
+    def test_whitelisted_overrides_blacklist(self) -> None:
+        blacklist = IPSet(["5.0.0.0/8"])
+        whitelist = IPSet(["5.1.1.1"])
+        self.assertFalse(
+            check_against_blacklist(IPAddress("5.1.1.1"), whitelist, blacklist)
+        )
+
+    def test_ipv6_loopback_blocked(self) -> None:
+        blacklist = IPSet(["::1/128"])
+        self.assertTrue(check_against_blacklist(IPAddress("::1"), None, blacklist))
+
+    def test_ipv6_link_local_blocked(self) -> None:
+        blacklist = IPSet(["fe80::/10"])
+        self.assertTrue(check_against_blacklist(IPAddress("fe80::1"), None, blacklist))
+
+    def test_ipv4_mapped_ipv6_blocked(self) -> None:
+        """IPv4-mapped IPv6 addresses (::ffff:127.0.0.1) should be blockable."""
+        blacklist = IPSet(["127.0.0.0/8", "::ffff:127.0.0.0/104"])
+        self.assertTrue(
+            check_against_blacklist(IPAddress("::ffff:127.0.0.1"), None, blacklist)
+        )
+
+    def test_ipv6_whitelist_overrides(self) -> None:
+        blacklist = IPSet(["fe80::/10"])
+        whitelist = IPSet(["fe80::1"])
+        self.assertFalse(
+            check_against_blacklist(IPAddress("fe80::1"), whitelist, blacklist)
+        )
 
 
 class BlacklistingAgentTest(TestCase):

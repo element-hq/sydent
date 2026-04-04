@@ -1,6 +1,7 @@
 import json
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
+from OpenSSL import crypto
 from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.web.client import Response
@@ -190,3 +191,101 @@ class ReplicationTestCase(unittest.TestCase):
             # will push will be 1, so we need to subtract 1 when figuring out which index
             # to lookup.
             self.assertDictEqual(assoc, signed_assocs[int(assoc_id) - 1])
+
+
+class ReplicationCNTest(unittest.TestCase):
+    """Tests for peer certificate CN extraction edge cases in the replication servlet."""
+
+    def setUp(self) -> None:
+        self.sydent = make_sydent()
+
+        # Insert a known peer.
+        cur = self.sydent.db.cursor()
+        cur.execute(
+            "INSERT INTO peers (name, port, lastSentVersion, active) VALUES (?, ?, ?, ?)",
+            ("fake.server", 1234, 0, 1),
+        )
+        peer_public_key_base64 = "+vB8mTaooD/MA8YYZM8t9+vnGhP1937q2icrqPV9JTs"
+        cur.execute(
+            "INSERT INTO peer_pubkeys (peername, alg, key) VALUES (?, ?, ?)",
+            ("fake.server", "ed25519", peer_public_key_base64),
+        )
+        self.sydent.db.commit()
+
+    def test_known_peer_cn_accepted(self) -> None:
+        """A peer cert with CN matching a known peer is accepted (existing test validates this,
+        but let's have a focused unit-level check)."""
+        self.sydent.run()
+
+        # The FakeChannel.getPeerCertificate() returns a cert with CN=fake.server,
+        # and we inserted fake.server as a peer. A valid request should be accepted.
+        body = {"sgAssocs": {}}
+        request, channel = make_request(
+            self.sydent.reactor,
+            self.sydent.replicationHttpsServer.factory,
+            "POST",
+            "/_matrix/identity/replicate/v1/push",
+            body,
+        )
+        self.assertEqual(channel.code, 200)
+
+    def test_unknown_peer_cn_rejected(self) -> None:
+        """A peer cert with CN that doesn't match any known peer returns 403."""
+        self.sydent.run()
+
+        # Generate a cert with a CN that is NOT in the peers table.
+        unknown_key = crypto.PKey()
+        unknown_key.generate_key(crypto.TYPE_RSA, 2048)
+        unknown_cert = crypto.X509()
+        unknown_cert.get_subject().CN = "unknown.server"
+        unknown_cert.set_serial_number(1000)
+        unknown_cert.gmtime_adj_notBefore(0)
+        unknown_cert.gmtime_adj_notAfter(10 * 365 * 24 * 60 * 60)
+        unknown_cert.set_issuer(unknown_cert.get_subject())
+        unknown_cert.set_pubkey(unknown_key)
+        unknown_cert.sign(unknown_key, "sha256")
+
+        # Patch FakeChannel.getPeerCertificate to return our unknown cert.
+        with patch(
+            "tests.utils.FakeChannel.getPeerCertificate", return_value=unknown_cert
+        ):
+            body = {"sgAssocs": {}}
+            request, channel = make_request(
+                self.sydent.reactor,
+                self.sydent.replicationHttpsServer.factory,
+                "POST",
+                "/_matrix/identity/replicate/v1/push",
+                body,
+            )
+        self.assertEqual(channel.code, 403)
+        self.assertEqual(channel.json_body["errcode"], "M_UNKNOWN_PEER")
+
+    def test_no_cn_rejected(self) -> None:
+        """A peer cert with no commonName returns 403."""
+        self.sydent.run()
+
+        # Generate a cert with no CN set.
+        no_cn_key = crypto.PKey()
+        no_cn_key.generate_key(crypto.TYPE_RSA, 2048)
+        no_cn_cert = crypto.X509()
+        # Don't set CN — leave subject empty.
+        no_cn_cert.set_serial_number(2000)
+        no_cn_cert.gmtime_adj_notBefore(0)
+        no_cn_cert.gmtime_adj_notAfter(10 * 365 * 24 * 60 * 60)
+        no_cn_cert.set_issuer(no_cn_cert.get_subject())
+        no_cn_cert.set_pubkey(no_cn_key)
+        no_cn_cert.sign(no_cn_key, "sha256")
+
+        with patch(
+            "tests.utils.FakeChannel.getPeerCertificate", return_value=no_cn_cert
+        ):
+            body = {"sgAssocs": {}}
+            request, channel = make_request(
+                self.sydent.reactor,
+                self.sydent.replicationHttpsServer.factory,
+                "POST",
+                "/_matrix/identity/replicate/v1/push",
+                body,
+            )
+        self.assertEqual(channel.code, 403)
+        self.assertEqual(channel.json_body["errcode"], "M_UNKNOWN_PEER")
