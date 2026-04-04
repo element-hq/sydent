@@ -751,14 +751,12 @@ version = "0.1"
 source = { editable = "integration-tests" }
 dependencies = [
     { name = "requests" },
-    { name = "six" },
     { name = "twisted" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "requests", specifier = ">=2.22.0" },
-    { name = "six", specifier = ">=1.13.0" },
     { name = "twisted", specifier = ">=19.2.1" },
 ]
 
@@ -1171,15 +1169,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8e/3b/614317881125d7c9d582cf54d81f537cfb52c81c4fc0177a1709f3d475d1/signedjson-1.1.4.tar.gz", hash = "sha256:cd91c56af53f169ef032c62e9c4a3292dc158866933318d0592e3462db3d6492", size = 13565, upload-time = "2022-03-29T16:30:28.208Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6c/a6/fae4333170898827f4d7ff71bec4e79d75fb9d258ecb9a98ee77e38f4df8/signedjson-1.1.4-py3-none-any.whl", hash = "sha256:45569ec54241c65d2403fe3faf7169be5322547706a231e884ca2b427f23d228", size = 10676, upload-time = "2022-03-29T16:30:25.796Z" },
-]
-
-[[package]]
-name = "six"
-version = "1.17.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
 ]
 
 [[package]]
