@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import atexit
+import threading
 from multiprocessing import Process, Queue
 
 from aiosmtpd.controller import Controller
@@ -55,23 +55,19 @@ def _run_mail_sink(q):
     handler = _MailSinkHandler(q)
     controller = Controller(handler, hostname="127.0.0.1", port=9925)
     controller.start()
-    # Block forever (the controller runs in a thread)
-    try:
-        asyncio.get_event_loop().run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        controller.stop()
+    # Block until terminated
+    threading.Event().wait()
 
 
 class MailSink:
     def launch(self):
         self.queue = Queue()
         self.process = Process(target=_run_mail_sink, args=(self.queue,))
+        self.process.daemon = True
         self.process.start()
 
     def get_mail(self):
-        return self.queue.get(timeout=2.0)
+        return self.queue.get(timeout=5.0)
 
     def tearDown(self):
         self.process.terminate()

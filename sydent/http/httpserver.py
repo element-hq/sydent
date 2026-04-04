@@ -9,49 +9,58 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
+import functools
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-import twisted.internet.ssl
-from twisted.web.resource import Resource
-from twisted.web.server import Site
+from aiohttp import web
 
-from sydent.http.httpcommon import SizeLimitingRequest
-from sydent.http.servlets.accountservlet import AccountServlet
+from sydent.http.servlets import (
+    cors_middleware,
+    json_response,
+    matrix_error_middleware,
+    metrics_middleware,
+)
+from sydent.http.servlets.accountservlet import handle_account_get
 from sydent.http.servlets.authenticated_bind_threepid_servlet import (
-    AuthenticatedBindThreePidServlet,
+    handle_authenticated_bind_threepid_post,
 )
 from sydent.http.servlets.authenticated_unbind_threepid_servlet import (
-    AuthenticatedUnbindThreePidServlet,
+    handle_authenticated_unbind_threepid_post,
 )
-from sydent.http.servlets.blindlysignstuffservlet import BlindlySignStuffServlet
-from sydent.http.servlets.bulklookupservlet import BulkLookupServlet
-from sydent.http.servlets.cors_servlet import CorsServlet
+from sydent.http.servlets.blindlysignstuffservlet import (
+    handle_blindly_sign_stuff_post,
+)
+from sydent.http.servlets.bulklookupservlet import handle_bulk_lookup_post
 from sydent.http.servlets.emailservlet import (
-    EmailRequestCodeServlet,
-    EmailValidateCodeServlet,
+    handle_email_request_code_post,
+    handle_email_validate_code_get,
+    handle_email_validate_code_post,
 )
-from sydent.http.servlets.getvalidated3pidservlet import GetValidated3pidServlet
-from sydent.http.servlets.hashdetailsservlet import HashDetailsServlet
-from sydent.http.servlets.logoutservlet import LogoutServlet
-from sydent.http.servlets.lookupservlet import LookupServlet
-from sydent.http.servlets.lookupv2servlet import LookupV2Servlet
+from sydent.http.servlets.getvalidated3pidservlet import (
+    handle_get_validated_3pid_get,
+)
+from sydent.http.servlets.hashdetailsservlet import handle_hash_details_get
+from sydent.http.servlets.logoutservlet import handle_logout_post
+from sydent.http.servlets.lookupservlet import handle_lookup_get
+from sydent.http.servlets.lookupv2servlet import handle_lookup_v2_post
 from sydent.http.servlets.msisdnservlet import (
-    MsisdnRequestCodeServlet,
-    MsisdnValidateCodeServlet,
+    handle_msisdn_request_code_post,
+    handle_msisdn_validate_code_get,
+    handle_msisdn_validate_code_post,
 )
 from sydent.http.servlets.pubkeyservlets import (
-    Ed25519Servlet,
-    EphemeralPubkeyIsValidServlet,
-    PubkeyIsValidServlet,
+    handle_ed25519_get,
+    handle_ephemeral_pubkey_is_valid_get,
+    handle_pubkey_is_valid_get,
 )
-from sydent.http.servlets.registerservlet import RegisterServlet
-from sydent.http.servlets.replication import ReplicationPushServlet
-from sydent.http.servlets.store_invite_servlet import StoreInviteServlet
-from sydent.http.servlets.termsservlet import TermsServlet
-from sydent.http.servlets.threepidbindservlet import ThreePidBindServlet
-from sydent.http.servlets.threepidunbindservlet import ThreePidUnbindServlet
-from sydent.http.servlets.versions import VersionsServlet
+from sydent.http.servlets.registerservlet import handle_register_post
+from sydent.http.servlets.replication import handle_replication_push_post
+from sydent.http.servlets.store_invite_servlet import handle_store_invite_post
+from sydent.http.servlets.termsservlet import handle_terms_get, handle_terms_post
+from sydent.http.servlets.threepidbindservlet import handle_threepid_bind_post
+from sydent.http.servlets.threepidunbindservlet import handle_threepid_unbind_post
+from sydent.http.servlets.versions import handle_versions_get
 
 if TYPE_CHECKING:
     from sydent.sydent import Sydent
@@ -59,211 +68,288 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _with_require_auth(handler: Any, require_auth: bool) -> Any:
+    """Wrap a handler that takes require_auth as a second argument."""
+
+    @functools.wraps(handler)
+    async def wrapper(request: web.Request) -> web.Response:
+        response: web.Response = await handler(request, require_auth=require_auth)
+        return response
+
+    return wrapper
+
+
+def _with_lookup_pepper(handler: Any, lookup_pepper: str) -> Any:
+    """Wrap a handler that takes lookup_pepper as a second argument."""
+
+    @functools.wraps(handler)
+    async def wrapper(request: web.Request) -> web.Response:
+        response: web.Response = await handler(request, lookup_pepper=lookup_pepper)
+        return response
+
+    return wrapper
+
+
+def _make_client_app(sydent: "Sydent", lookup_pepper: str) -> web.Application:
+    """Build the client-facing aiohttp application with all routes."""
+    from sydent.util.ratelimiter import Ratelimiter
+
+    app = web.Application(
+        middlewares=[
+            metrics_middleware,
+            cors_middleware,
+            matrix_error_middleware,
+        ],
+        client_max_size=512 * 1024,  # 512 KiB, matching old SizeLimitingRequest
+    )
+    app["sydent"] = sydent
+
+    # Pre-populate ratelimiters for MSISDN servlets (avoids modifying app during requests).
+    if hasattr(sydent.config, "sms"):
+        app["msisdn_ratelimiter"] = Ratelimiter[str](
+            burst=sydent.config.sms.msisdn_ratelimit_burst,
+            rate_hz=sydent.config.sms.msisdn_ratelimit_rate_hz,
+        )
+        app["country_ratelimiter"] = Ratelimiter[int](
+            burst=sydent.config.sms.country_ratelimit_burst,
+            rate_hz=sydent.config.sms.country_ratelimit_rate_hz,
+        )
+
+    # Root path handlers (used by CorsServlet in old Twisted code, and test pings)
+    async def _empty_json(request: web.Request) -> web.Response:
+        return json_response({})
+
+    app.router.add_get("/_matrix/identity/api/v1", _empty_json)
+    app.router.add_get("/_matrix/identity/v2", _empty_json)
+
+    # Public key routes (shared between v1 and v2)
+    for prefix in ("/_matrix/identity/api/v1", "/_matrix/identity/v2"):
+        app.router.add_get(f"{prefix}/pubkey/ed25519:0", handle_ed25519_get)
+        app.router.add_get(f"{prefix}/pubkey/isvalid", handle_pubkey_is_valid_get)
+        app.router.add_get(
+            f"{prefix}/pubkey/ephemeral/isvalid",
+            handle_ephemeral_pubkey_is_valid_get,
+        )
+
+    # Versions (no auth, shared)
+    app.router.add_get("/_matrix/identity/versions", handle_versions_get)
+
+    # v1 routes (optional)
+    if sydent.config.general.enable_v1_access:
+        v1 = "/_matrix/identity/api/v1"
+
+        app.router.add_get(f"{v1}/lookup", handle_lookup_get)
+        app.router.add_post(f"{v1}/bulk_lookup", handle_bulk_lookup_post)
+
+        # v1 email validation
+        app.router.add_post(
+            f"{v1}/validate/email/requestToken",
+            _with_require_auth(handle_email_request_code_post, require_auth=False),
+        )
+        app.router.add_get(
+            f"{v1}/validate/email/submitToken",
+            _with_require_auth(handle_email_validate_code_get, require_auth=False),
+        )
+        app.router.add_post(
+            f"{v1}/validate/email/submitToken",
+            _with_require_auth(handle_email_validate_code_post, require_auth=False),
+        )
+
+        # v1 msisdn validation
+        app.router.add_post(
+            f"{v1}/validate/msisdn/requestToken",
+            _with_require_auth(handle_msisdn_request_code_post, require_auth=False),
+        )
+        app.router.add_get(
+            f"{v1}/validate/msisdn/submitToken",
+            _with_require_auth(handle_msisdn_validate_code_get, require_auth=False),
+        )
+        app.router.add_post(
+            f"{v1}/validate/msisdn/submitToken",
+            _with_require_auth(handle_msisdn_validate_code_post, require_auth=False),
+        )
+
+        # v1 3pid
+        app.router.add_get(
+            f"{v1}/3pid/getValidated3pid",
+            _with_require_auth(handle_get_validated_3pid_get, require_auth=False),
+        )
+        app.router.add_post(f"{v1}/3pid/unbind", handle_threepid_unbind_post)
+
+        # v1 store-invite, sign
+        app.router.add_post(
+            f"{v1}/store-invite",
+            _with_require_auth(handle_store_invite_post, require_auth=False),
+        )
+        app.router.add_post(
+            f"{v1}/sign-ed25519",
+            _with_require_auth(handle_blindly_sign_stuff_post, require_auth=False),
+        )
+
+    if sydent.config.general.enable_v1_associations:
+        v1 = "/_matrix/identity/api/v1"
+        app.router.add_post(
+            f"{v1}/3pid/bind",
+            _with_require_auth(handle_threepid_bind_post, require_auth=False),
+        )
+
+    # v2 routes
+    v2 = "/_matrix/identity/v2"
+
+    # v2 account
+    app.router.add_get(f"{v2}/account", handle_account_get)
+    app.router.add_post(f"{v2}/account/register", handle_register_post)
+    app.router.add_post(f"{v2}/account/logout", handle_logout_post)
+
+    # v2 terms
+    app.router.add_get(f"{v2}/terms", handle_terms_get)
+    app.router.add_post(f"{v2}/terms", handle_terms_post)
+
+    # v2 email validation
+    app.router.add_post(
+        f"{v2}/validate/email/requestToken",
+        _with_require_auth(handle_email_request_code_post, require_auth=True),
+    )
+    app.router.add_get(
+        f"{v2}/validate/email/submitToken",
+        _with_require_auth(handle_email_validate_code_get, require_auth=True),
+    )
+    app.router.add_post(
+        f"{v2}/validate/email/submitToken",
+        _with_require_auth(handle_email_validate_code_post, require_auth=True),
+    )
+
+    # v2 msisdn validation
+    app.router.add_post(
+        f"{v2}/validate/msisdn/requestToken",
+        _with_require_auth(handle_msisdn_request_code_post, require_auth=True),
+    )
+    app.router.add_get(
+        f"{v2}/validate/msisdn/submitToken",
+        _with_require_auth(handle_msisdn_validate_code_get, require_auth=True),
+    )
+    app.router.add_post(
+        f"{v2}/validate/msisdn/submitToken",
+        _with_require_auth(handle_msisdn_validate_code_post, require_auth=True),
+    )
+
+    # v2 3pid
+    app.router.add_get(
+        f"{v2}/3pid/getValidated3pid",
+        _with_require_auth(handle_get_validated_3pid_get, require_auth=True),
+    )
+    app.router.add_post(
+        f"{v2}/3pid/bind",
+        _with_require_auth(handle_threepid_bind_post, require_auth=True),
+    )
+    app.router.add_post(f"{v2}/3pid/unbind", handle_threepid_unbind_post)
+
+    # v2 store-invite, sign, lookup, hash_details
+    app.router.add_post(
+        f"{v2}/store-invite",
+        _with_require_auth(handle_store_invite_post, require_auth=True),
+    )
+    app.router.add_post(
+        f"{v2}/sign-ed25519",
+        _with_require_auth(handle_blindly_sign_stuff_post, require_auth=True),
+    )
+    app.router.add_post(
+        f"{v2}/lookup",
+        _with_lookup_pepper(handle_lookup_v2_post, lookup_pepper),
+    )
+    app.router.add_get(
+        f"{v2}/hash_details",
+        _with_lookup_pepper(handle_hash_details_get, lookup_pepper),
+    )
+
+    return app
+
+
+def _make_internal_app(sydent: "Sydent") -> web.Application:
+    """Build the internal API aiohttp application."""
+    app = web.Application(
+        middlewares=[
+            matrix_error_middleware,
+        ],
+    )
+    app["sydent"] = sydent
+
+    app.router.add_post(
+        "/_matrix/identity/internal/bind", handle_authenticated_bind_threepid_post
+    )
+    app.router.add_post(
+        "/_matrix/identity/internal/unbind", handle_authenticated_unbind_threepid_post
+    )
+
+    return app
+
+
+def _make_replication_app(sydent: "Sydent") -> web.Application:
+    """Build the replication HTTPS aiohttp application."""
+    app = web.Application(
+        middlewares=[
+            matrix_error_middleware,
+        ],
+    )
+    app["sydent"] = sydent
+
+    app.router.add_post(
+        "/_matrix/identity/replicate/v1/push", handle_replication_push_post
+    )
+
+    return app
+
+
 class ClientApiHttpServer:
     def __init__(self, sydent: "Sydent", lookup_pepper: str) -> None:
-        """
-        Args:
-            lookup_pepper: The pepper used when hashing identifiers.
-
-        """
         self.sydent = sydent
+        self.app = _make_client_app(sydent, lookup_pepper)
 
-        root = Resource()
-        matrix = Resource()
-        identity = Resource()
-        api = Resource()
-        v1 = CorsServlet(sydent)
-        v2 = CorsServlet(sydent)
+    async def start(self) -> web.AppRunner:
+        runner = web.AppRunner(self.app)
+        await runner.setup()
 
-        validate = Resource()
-        validate_v2 = Resource()
-        email = Resource()
-        email_v2 = Resource()
-        msisdn = Resource()
-        msisdn_v2 = Resource()
-
-        threepid_v1 = Resource()
-        threepid_v2 = Resource()
-        unbind = ThreePidUnbindServlet(sydent)
-
-        pubkey = Resource()
-        ephemeralPubkey = Resource()
-
-        root.putChild(b"_matrix", matrix)
-        matrix.putChild(b"identity", identity)
-        identity.putChild(b"api", api)
-        identity.putChild(b"v2", v2)
-        identity.putChild(b"versions", VersionsServlet())
-
-        pubkey.putChild(b"isvalid", PubkeyIsValidServlet(sydent))
-        pubkey.putChild(b"ed25519:0", Ed25519Servlet(sydent))
-        pubkey.putChild(b"ephemeral", ephemeralPubkey)
-        ephemeralPubkey.putChild(b"isvalid", EphemeralPubkeyIsValidServlet(sydent))
-
-        # v1
-        if self.sydent.config.general.enable_v1_access:
-            api.putChild(b"v1", v1)
-            validate.putChild(b"email", email)
-            validate.putChild(b"msisdn", msisdn)
-            v1.putChild(b"validate", validate)
-
-            v1.putChild(b"lookup", LookupServlet(sydent))
-            v1.putChild(b"bulk_lookup", BulkLookupServlet(sydent))
-
-            v1.putChild(b"pubkey", pubkey)
-
-            threepid_v1.putChild(b"getValidated3pid", GetValidated3pidServlet(sydent))
-            threepid_v1.putChild(b"unbind", unbind)
-            v1.putChild(b"3pid", threepid_v1)
-
-            email.putChild(b"requestToken", EmailRequestCodeServlet(sydent))
-            email.putChild(b"submitToken", EmailValidateCodeServlet(sydent))
-
-            msisdn.putChild(b"requestToken", MsisdnRequestCodeServlet(sydent))
-            msisdn.putChild(b"submitToken", MsisdnValidateCodeServlet(sydent))
-
-            v1.putChild(b"store-invite", StoreInviteServlet(sydent))
-
-            v1.putChild(b"sign-ed25519", BlindlySignStuffServlet(sydent))
-
-        if self.sydent.config.general.enable_v1_associations:
-            threepid_v1.putChild(b"bind", ThreePidBindServlet(sydent))
-
-        # v2
-        # note v2 loses the /api so goes on 'identity' not 'api'
-        identity.putChild(b"v2", v2)
-
-        validate_v2.putChild(b"email", email_v2)
-        validate_v2.putChild(b"msisdn", msisdn_v2)
-
-        threepid_v2.putChild(
-            b"getValidated3pid", GetValidated3pidServlet(sydent, require_auth=True)
-        )
-        threepid_v2.putChild(b"bind", ThreePidBindServlet(sydent, require_auth=True))
-        threepid_v2.putChild(b"unbind", unbind)
-
-        email_v2.putChild(
-            b"requestToken", EmailRequestCodeServlet(sydent, require_auth=True)
-        )
-        email_v2.putChild(
-            b"submitToken", EmailValidateCodeServlet(sydent, require_auth=True)
-        )
-
-        msisdn_v2.putChild(
-            b"requestToken", MsisdnRequestCodeServlet(sydent, require_auth=True)
-        )
-        msisdn_v2.putChild(
-            b"submitToken", MsisdnValidateCodeServlet(sydent, require_auth=True)
-        )
-
-        # v2 exclusive APIs
-        v2.putChild(b"terms", TermsServlet(sydent))
-        account = AccountServlet(sydent)
-        v2.putChild(b"account", account)
-        account.putChild(b"register", RegisterServlet(sydent))
-        account.putChild(b"logout", LogoutServlet(sydent))
-
-        # v2 versions of existing APIs
-        v2.putChild(b"validate", validate_v2)
-        v2.putChild(b"pubkey", pubkey)
-        v2.putChild(b"3pid", threepid_v2)
-        v2.putChild(b"store-invite", StoreInviteServlet(sydent, require_auth=True))
-        v2.putChild(b"sign-ed25519", BlindlySignStuffServlet(sydent, require_auth=True))
-        v2.putChild(b"lookup", LookupV2Servlet(sydent, lookup_pepper))
-        v2.putChild(b"hash_details", HashDetailsServlet(sydent, lookup_pepper))
-
-        self.factory = Site(root, SizeLimitingRequest)
-        self.factory.displayTracebacks = False
-
-    def setup(self) -> None:
-        httpPort = self.sydent.config.http.client_port
+        port = self.sydent.config.http.client_port
         interface = self.sydent.config.http.client_bind_address
 
-        logger.info("Starting Client API HTTP server on %s:%d", interface, httpPort)
-        self.sydent.reactor.listenTCP(
-            httpPort,
-            self.factory,
-            backlog=50,  # taken from PosixReactorBase.listenTCP
-            interface=interface,
-        )
+        logger.info("Starting Client API HTTP server on %s:%d", interface, port)
+        site = web.TCPSite(runner, interface, port, backlog=50)
+        await site.start()
+        return runner
 
 
 class InternalApiHttpServer:
     def __init__(self, sydent: "Sydent") -> None:
         self.sydent = sydent
+        self.app = _make_internal_app(sydent)
 
-    def setup(self, interface: str, port: int) -> None:
+    async def start(self, interface: str, port: int) -> web.AppRunner:
+        runner = web.AppRunner(self.app)
+        await runner.setup()
+
         logger.info("Starting Internal API HTTP server on %s:%d", interface, port)
-        root = Resource()
-
-        matrix = Resource()
-        root.putChild(b"_matrix", matrix)
-
-        identity = Resource()
-        matrix.putChild(b"identity", identity)
-
-        internal = Resource()
-        identity.putChild(b"internal", internal)
-
-        authenticated_bind = AuthenticatedBindThreePidServlet(self.sydent)
-        internal.putChild(b"bind", authenticated_bind)
-
-        authenticated_unbind = AuthenticatedUnbindThreePidServlet(self.sydent)
-        internal.putChild(b"unbind", authenticated_unbind)
-
-        factory = Site(root)
-        factory.displayTracebacks = False
-        self.sydent.reactor.listenTCP(
-            port,
-            factory,
-            backlog=50,  # taken from PosixReactorBase.listenTCP
-            interface=interface,
-        )
+        site = web.TCPSite(runner, interface, port, backlog=50)
+        await site.start()
+        return runner
 
 
 class ReplicationHttpsServer:
     def __init__(self, sydent: "Sydent") -> None:
         self.sydent = sydent
+        self.app = _make_replication_app(sydent)
 
-        root = Resource()
-        matrix = Resource()
-        identity = Resource()
+    async def start(self) -> web.AppRunner | None:
+        ssl_ctx = self.sydent.sslComponents.ssl_context
+        if ssl_ctx is None:
+            return None
 
-        root.putChild(b"_matrix", matrix)
-        matrix.putChild(b"identity", identity)
+        runner = web.AppRunner(self.app)
+        await runner.setup()
 
-        replicate = Resource()
-        replV1 = Resource()
-
-        identity.putChild(b"replicate", replicate)
-        replicate.putChild(b"v1", replV1)
-        replV1.putChild(b"push", ReplicationPushServlet(sydent))
-
-        self.factory = Site(root)
-        self.factory.displayTracebacks = False
-
-    def setup(self) -> None:
-        httpPort = self.sydent.config.http.replication_port
+        port = self.sydent.config.http.replication_port
         interface = self.sydent.config.http.replication_bind_address
 
-        if self.sydent.sslComponents.myPrivateCertificate:
-            # We will already have logged a warn if this is absent, so don't do it again
-            cert = self.sydent.sslComponents.myPrivateCertificate
-            certOptions = twisted.internet.ssl.CertificateOptions(
-                privateKey=cert.privateKey.original,
-                certificate=cert.original,
-                trustRoot=self.sydent.sslComponents.trustRoot,
-            )
-
-            logger.info("Loaded server private key and certificate!")
-            logger.info(
-                "Starting Replication HTTPS server on %s:%d", interface, httpPort
-            )
-
-            self.sydent.reactor.listenSSL(
-                httpPort,
-                self.factory,
-                certOptions,
-                backlog=50,  # taken from PosixReactorBase.listenTCP
-                interface=interface,
-            )
+        logger.info("Starting Replication HTTPS server on %s:%d", interface, port)
+        site = web.TCPSite(runner, interface, port, backlog=50, ssl_context=ssl_ctx)
+        await site.start()
+        return runner

@@ -10,14 +10,14 @@
 import logging
 import random
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from typing import SupportsInt
 
 import attr
-from twisted.internet.error import ConnectError
-from twisted.names import client, dns
-from twisted.names.dns import Record_SRV, RRHeader
-from twisted.names.error import DNSNameError, DomainError
+import dns.asyncresolver
+import dns.exception
+import dns.name
+import dns.rdatatype
 
 logger = logging.getLogger(__name__)
 
@@ -74,34 +74,11 @@ def pick_server_from_list(server_list: list[Server]) -> tuple[bytes, int]:
     )
 
 
-# The signature of twisted.names.client.lookupService, if you omit the timeout
-# argument. This is unannotated, but we can deduce the signature as follows:
-# 1. Return type is the return type of
-#    twisted.internet.interfaces.IResolver.lookupService. Its type annotation
-#    is incorrect; its docstring says that tuple entries are a _list_ of RRHeaders,
-#    but the annotation says the entries are individual RRHeaders.
-# 2. Because we're looking up SRV records, we know that the payload of the RRHeaders
-#    will be Record_SRVs. I made RRHeader's stub generic over the type of its
-#    payload to reflect this. But that's a lie compared to Twisted's actual
-#    RRHeader Type, so we need to enclose these in strings.
-LookupService = Callable[
-    [str],
-    Awaitable[
-        tuple[
-            list["RRHeader[Record_SRV]"],
-            list["RRHeader[object]"],
-            list["RRHeader[object]"],
-        ]
-    ],
-]
-
-
 class SrvResolver:
     """Interface to the dns client to do SRV lookups, with result caching.
-    The default resolver in twisted.names doesn't do any caching (it has a CacheResolver,
-    but the cache never gets populated), so we add our own caching layer here.
 
-    :param dns_client: Twisted resolver impl
+    The default resolver in dnspython doesn't do any caching, so we add our own
+    caching layer here.
 
     :param cache: cache object
 
@@ -110,13 +87,12 @@ class SrvResolver:
 
     def __init__(
         self,
-        lookup_service: LookupService = client.lookupService,
         cache: dict[bytes, list[Server]] = SERVER_CACHE,
         get_time: Callable[[], SupportsInt] = time.time,
     ) -> None:
-        self._lookup_service = lookup_service
         self._cache = cache
         self._get_time = get_time
+        self._resolver = dns.asyncresolver.Resolver()
 
     async def resolve_service(self, service_name: bytes) -> list["Server"]:
         """Look up a SRV record
@@ -134,46 +110,41 @@ class SrvResolver:
                 return servers
 
         try:
-            answers, _, _ = await self._lookup_service(service_name.decode())
-        except DNSNameError:
+            answers = await self._resolver.resolve(service_name.decode(), "SRV")
+        except dns.resolver.NXDOMAIN:
             # TODO: cache this. We can get the SOA out of the exception, and use
             # the negative-TTL value.
             return []
-        except DomainError as e:
-            # We failed to resolve the name (other than a NameError)
-            # Try something in the cache, else rereaise
+        except dns.exception.DNSException as e:
+            # We failed to resolve the name (other than NXDOMAIN).
+            # Try something in the cache, else reraise.
             cache_entry = self._cache.get(service_name, None)
             if cache_entry:
                 logger.warning(
-                    "Failed to resolve %r, falling back to cache. %r", service_name, e
+                    "Failed to resolve %r, falling back to cache. %r",
+                    service_name,
+                    e,
                 )
                 return list(cache_entry)
             else:
                 raise e
 
-        if (
-            len(answers) == 1
-            and answers[0].type == dns.SRV
-            and answers[0].payload
-            and answers[0].payload.target == dns.Name(b".")
-        ):
-            raise ConnectError(f"Service {service_name.decode()} unavailable")
+        # Check for "." target meaning the service is explicitly unavailable
+        rdata_list = list(answers)
+        if len(rdata_list) == 1 and str(rdata_list[0].target) == ".":
+            raise OSError(f"Service {service_name.decode()} unavailable")
 
         servers = []
+        ttl = answers.rrset.ttl if answers.rrset is not None else 0
 
-        for answer in answers:
-            if answer.type != dns.SRV or not answer.payload:
-                continue
-
-            payload = answer.payload
-
+        for rdata in answers:
             servers.append(
                 Server(
-                    host=payload.target.name,
-                    port=payload.port,
-                    priority=payload.priority,
-                    weight=payload.weight,
-                    expires=now + answer.ttl,
+                    host=str(rdata.target).rstrip(".").encode(),
+                    port=rdata.port,
+                    priority=rdata.priority,
+                    weight=rdata.weight,
+                    expires=now + ttl,
                 )
             )
 

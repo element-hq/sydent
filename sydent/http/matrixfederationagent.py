@@ -8,34 +8,19 @@
 
 import logging
 import random
+import ssl
 import time
-from collections.abc import Callable, Generator
-from typing import Any, Optional
+from collections.abc import Callable
+from email.utils import parsedate_to_datetime
+from typing import Any
+from urllib.parse import urlparse
 
+import aiohttp
 import attr
 from netaddr import IPAddress
-from twisted.internet import defer
-from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
-from twisted.internet.interfaces import (
-    IProtocol,
-    IProtocolFactory,
-    IReactorTime,
-    IStreamClientEndpoint,
-)
-from twisted.web.client import URI, Agent, HTTPConnectionPool, RedirectAgent
-from twisted.web.http import stringToDatetime
-from twisted.web.http_headers import Headers
-from twisted.web.iweb import (
-    IAgent,
-    IAgentEndpointFactory,
-    IBodyProducer,
-    IPolicyForHTTPS,
-    IResponse,
-)
-from zope.interface import implementer
 
 from sydent.http.federation_tls_options import ClientTLSOptionsFactory
-from sydent.http.httpcommon import read_body_with_max_size
+from sydent.http.httpcommon import BodyExceededMaxSize
 from sydent.http.srvresolver import SrvResolver, pick_server_from_list
 from sydent.util import json_decoder
 from sydent.util.ttlcache import TTLCache
@@ -59,260 +44,206 @@ logger = logging.getLogger(__name__)
 well_known_cache: TTLCache[bytes, bytes | None] = TTLCache("well-known")
 
 
-@implementer(IAgent)
 class MatrixFederationAgent:
-    """An Agent-like thing which provides a `request` method which will look up a matrix
+    """An agent which provides a ``request`` method that will look up a Matrix
     server and send an HTTP request to it.
-    Doesn't implement any retries. (Those are done in MatrixFederationHttpClient.)
 
-    :param reactor: twisted reactor to use for underlying requests
+    Handles .well-known delegation, SRV resolution, and custom TLS options.
 
-    :param tls_client_options_factory: Factory to use for fetching client tls
-        options, or none to disable TLS.
+    :param session: An aiohttp.ClientSession to use for .well-known lookups.
+        Federation requests are made with per-request TLS settings so this
+        session is also used for them (with explicit ``ssl`` kwarg).
 
-    :param _well_known_tls_policy: TLS policy to use for fetching .well-known
-        files. None to use a default (browser-like) implementation.
+    :param tls_client_options_factory: Factory to use for fetching client TLS
+        options, or None to disable TLS verification.
 
-    :param _well_known_cache: TTLCache impl for storing cached well-known
-        lookups. Omit to use a default implementation.
+    :param srv_resolver: SRV resolver instance.
+
+    :param well_known_cache_: TTLCache for storing cached well-known lookups.
     """
 
     def __init__(
         self,
-        # This reactor should also be IReactorTCP and IReactorPluggableNameResolver
-        # because it eventually makes its way to HostnameEndpoint.__init__.
-        # But that's not easy to express with an annotation. We use the
-        # `seconds` attribute below, so mark this as IReactorTime for now.
-        reactor: IReactorTime,
+        session: aiohttp.ClientSession,
         tls_client_options_factory: ClientTLSOptionsFactory | None,
-        _well_known_tls_policy: IPolicyForHTTPS | None = None,
-        _srv_resolver: SrvResolver | None = None,
-        _well_known_cache: TTLCache[bytes, bytes | None] = well_known_cache,
+        srv_resolver: SrvResolver | None = None,
+        well_known_cache_: TTLCache[bytes, bytes | None] = well_known_cache,
     ) -> None:
-        self._reactor = reactor
-
+        self._session = session
         self._tls_client_options_factory = tls_client_options_factory
-        if _srv_resolver is None:
-            _srv_resolver = SrvResolver()
-        self._srv_resolver = _srv_resolver
 
-        self._pool = HTTPConnectionPool(reactor)
-        self._pool.retryAutomatically = False
-        self._pool.maxPersistentPerHost = 5
-        self._pool.cachedConnectionTimeout = 2 * 60
+        if srv_resolver is None:
+            srv_resolver = SrvResolver()
+        self._srv_resolver = srv_resolver
 
-        if _well_known_tls_policy is not None:
-            # the param is called 'contextFactory', but actually passing a
-            # contextfactory is deprecated, and it expects an IPolicyForHTTPS.
-            _well_known_agent = Agent(
-                self._reactor, pool=self._pool, contextFactory=_well_known_tls_policy
-            )
-        else:
-            _well_known_agent = Agent(self._reactor, pool=self._pool)
-        self._well_known_agent = RedirectAgent(_well_known_agent)
+        self._well_known_cache = well_known_cache_
 
-        # our cache of .well-known lookup results, mapping from server name
-        # to delegated name. The values can be:
-        #   `bytes`:     a valid server-name
-        #   `None`:      there is no (valid) .well-known here
-        self._well_known_cache = _well_known_cache
-
-    @defer.inlineCallbacks
-    def request(
+    async def request(
         self,
-        method: bytes,
-        uri: bytes,
-        headers: Optional["Headers"] = None,
-        bodyProducer: Optional["IBodyProducer"] = None,
-    ) -> Generator["defer.Deferred[Any]", Any, IResponse]:
-        """
-        :param method: HTTP method (GET/POST/etc).
+        method: str,
+        uri: str,
+        headers: dict[str, str] | None = None,
+        body: bytes | None = None,
+    ) -> aiohttp.ClientResponse:
+        """Make an HTTP request to a Matrix federation endpoint.
 
+        :param method: HTTP method (e.g. "GET", "POST").
         :param uri: Absolute URI to be retrieved.
+        :param headers: HTTP headers to send with the request.
+        :param body: Request body bytes, or None.
 
-        :param headers: HTTP headers to send with the request, or None to
-            send no extra headers.
-
-        :param bodyProducer: An object which can generate bytes to make up the
-            body of this request (for example, the properly encoded contents of
-            a file for a file upload).  Or None if the request is to have
-            no body.
-
-        :returns a deferred that fires when the header of the response has
-            been received (regardless of the response status code). Fails if
-            there is any problem which prevents that response from being received
-            (including problems that prevent the request from being sent).
+        :returns the response object. The caller is responsible for reading
+            and closing it.
         """
-        parsed_uri = URI.fromBytes(uri, defaultPort=-1)
-        routing: _RoutingResult
-        routing = yield defer.ensureDeferred(self._route_matrix_uri(parsed_uri))
+        parsed = urlparse(uri)
+        # Determine host and port from the URI
+        host = (parsed.hostname or "").encode("ascii")
+        port = parsed.port if parsed.port is not None else -1
+        path = parsed.path or "/"
+        if parsed.query:
+            path = path + "?" + parsed.query
 
-        # set up the TLS connection params
-        #
-        # XXX disabling TLS is really only supported here for the benefit of the
-        # unit tests. We should make the UTs cope with TLS rather than having to make
-        # the code support the unit tests.
+        routing = await self._route_matrix_uri(host, port, path.encode("ascii"))
+
+        # Build actual URL with resolved host:port
+        target_host = routing.target_host.decode("ascii")
+        actual_url = f"https://{target_host}:{routing.target_port}{path}"
+
+        if headers is None:
+            headers = {}
+
+        if "Host" not in headers:
+            headers["Host"] = routing.host_header.decode("ascii")
+
+        # Determine TLS settings
+        ssl_ctx: ssl.SSLContext | bool
         if self._tls_client_options_factory is None:
-            tls_options = None
+            ssl_ctx = False
         else:
-            tls_options = self._tls_client_options_factory.get_options(
+            ssl_ctx = self._tls_client_options_factory.get_ssl_context(
                 routing.tls_server_name.decode("ascii")
             )
 
-        # make sure that the Host header is set correctly
-        if headers is None:
-            headers = Headers()
-        else:
-            # Type safety: Headers.copy doesn't have a return type annotated,
-            # and I don't want to stub web.http_headers. Could use stubgen? It's
-            # a pretty simple file.
-            headers = headers.copy()  # type: ignore[no-untyped-call]
-            assert headers is not None
+        logger.info(
+            "Connecting to %s:%d for federation request",
+            target_host,
+            routing.target_port,
+        )
 
-        if not headers.hasHeader(b"host"):
-            headers.addRawHeader(b"host", routing.host_header)
-
-        @implementer(IAgentEndpointFactory)
-        class EndpointFactory:
-            @staticmethod
-            def endpointForURI(_uri: URI) -> IStreamClientEndpoint:
-                ep: IStreamClientEndpoint = LoggingHostnameEndpoint(
-                    self._reactor,
-                    routing.target_host,
-                    routing.target_port,
-                )
-                if tls_options is not None:
-                    ep = wrapClientTLS(tls_options, ep)
-                return ep
-
-        agent = Agent.usingEndpointFactory(self._reactor, EndpointFactory(), self._pool)
-        res: IResponse
-        res = yield agent.request(method, uri, headers, bodyProducer)
-        return res
+        resp = await self._session.request(
+            method,
+            actual_url,
+            headers=headers,
+            data=body,
+            ssl=ssl_ctx,
+        )
+        return resp
 
     async def _route_matrix_uri(
-        self, parsed_uri: "URI", lookup_well_known: bool = True
+        self,
+        host: bytes,
+        port: int,
+        path: bytes,
+        lookup_well_known: bool = True,
     ) -> "_RoutingResult":
-        """Helper for `request`: determine the routing for a Matrix URI
+        """Determine the routing for a Matrix URI.
 
-        :param parsed_uri: uri to route. Note that it should be parsed with
-            URI.fromBytes(uri, defaultPort=-1) to set the `port` to -1 if there
-            is no explicit port given.
-        :param lookup_well_known: True if we should look up the .well-known
-            file if there is no SRV record.
+        :param host: The hostname from the URI.
+        :param port: The port from the URI, or -1 if none given.
+        :param path: The path component of the URI.
+        :param lookup_well_known: Whether to try .well-known delegation.
 
         :returns a routing result.
         """
-        # check for an IP literal
+        # Check for an IP literal
         try:
-            ip_address = IPAddress(parsed_uri.host.decode("ascii"))
+            ip_address = IPAddress(host.decode("ascii"))
         except Exception:
-            # not an IP address
             ip_address = None
 
         if ip_address:
-            port = parsed_uri.port
             if port == -1:
                 port = 8448
+            netloc = host if port == 8448 else host + b":" + str(port).encode()
             return _RoutingResult(
-                host_header=parsed_uri.netloc,
-                tls_server_name=parsed_uri.host,
-                target_host=parsed_uri.host,
+                host_header=netloc,
+                tls_server_name=host,
+                target_host=host,
                 target_port=port,
             )
 
-        if parsed_uri.port != -1:
-            # there is an explicit port
+        if port != -1:
+            # There is an explicit port
+            netloc = host + b":" + str(port).encode()
             return _RoutingResult(
-                host_header=parsed_uri.netloc,
-                tls_server_name=parsed_uri.host,
-                target_host=parsed_uri.host,
-                target_port=parsed_uri.port,
+                host_header=netloc,
+                tls_server_name=host,
+                target_host=host,
+                target_port=port,
             )
 
         if lookup_well_known:
-            # try a .well-known lookup
-            well_known_server = await self._get_well_known(parsed_uri.host)
+            well_known_server = await self._get_well_known(host)
 
             if well_known_server:
-                # if we found a .well-known, start again, but don't do another
-                # .well-known lookup.
-
-                # parse the server name in the .well-known response into host/port.
-                # (This code is lifted from twisted.web.client.URI.fromBytes).
+                # Parse the server name in the .well-known response into host/port.
                 if b":" in well_known_server:
-                    well_known_host, well_known_port_raw = well_known_server.rsplit(
-                        b":", 1
-                    )
+                    wk_host, wk_port_raw = well_known_server.rsplit(b":", 1)
                     try:
-                        well_known_port = int(well_known_port_raw)
+                        wk_port = int(wk_port_raw)
                     except ValueError:
-                        # the part after the colon could not be parsed as an int
-                        # - we assume it is an IPv6 literal with no port (the closing
-                        # ']' stops it being parsed as an int)
-                        well_known_host, well_known_port = well_known_server, -1
+                        wk_host, wk_port = well_known_server, -1
                 else:
-                    well_known_host, well_known_port = well_known_server, -1
+                    wk_host, wk_port = well_known_server, -1
 
-                new_uri = URI(
-                    scheme=parsed_uri.scheme,
-                    netloc=well_known_server,
-                    host=well_known_host,
-                    port=well_known_port,
-                    path=parsed_uri.path,
-                    params=parsed_uri.params,
-                    query=parsed_uri.query,
-                    fragment=parsed_uri.fragment,
+                res = await self._route_matrix_uri(
+                    wk_host, wk_port, path, lookup_well_known=False
                 )
-
-                res = await self._route_matrix_uri(new_uri, lookup_well_known=False)
                 return res
 
         # Look up SRV for Matrix 1.8 `matrix-fed` service first
-        service_name = b"_matrix-fed._tcp.%s" % (parsed_uri.host,)
+        service_name = b"_matrix-fed._tcp.%s" % (host,)
         server_list = await self._srv_resolver.resolve_service(service_name)
         if server_list:
-            target_host, port = pick_server_from_list(server_list)
+            target_host, target_port = pick_server_from_list(server_list)
             logger.debug(
                 "Picked %s:%i from _matrix-fed SRV records for %s",
                 target_host.decode("ascii"),
-                port,
-                parsed_uri.host.decode("ascii"),
+                target_port,
+                host.decode("ascii"),
             )
-
         else:
             # Fall back to deprecated `matrix` service
-            service_name = b"_matrix._tcp.%s" % (parsed_uri.host,)
+            service_name = b"_matrix._tcp.%s" % (host,)
             server_list = await self._srv_resolver.resolve_service(service_name)
 
-            # Fall even further back to just port 8448
             if not server_list:
-                target_host = parsed_uri.host
-                port = 8448
+                target_host = host
+                target_port = 8448
                 logger.debug(
                     "No SRV record for %s, using %s:%i",
-                    parsed_uri.host.decode("ascii"),
+                    host.decode("ascii"),
                     target_host.decode("ascii"),
-                    port,
+                    target_port,
                 )
             else:
-                target_host, port = pick_server_from_list(server_list)
+                target_host, target_port = pick_server_from_list(server_list)
                 logger.debug(
                     "Picked %s:%i from _matrix SRV records for %s",
                     target_host.decode("ascii"),
-                    port,
-                    parsed_uri.host.decode("ascii"),
+                    target_port,
+                    host.decode("ascii"),
                 )
 
         return _RoutingResult(
-            host_header=parsed_uri.netloc,
-            tls_server_name=parsed_uri.host,
+            host_header=host,
+            tls_server_name=host,
             target_host=target_host,
-            target_port=port,
+            target_port=target_port,
         )
 
     async def _get_well_known(self, server_name: bytes) -> bytes | None:
-        """Attempt to fetch and parse a .well-known file for the given server
+        """Attempt to fetch and parse a .well-known file for the given server.
 
         :param server_name: Name of the server, from the requested url.
 
@@ -322,8 +253,6 @@ class MatrixFederationAgent:
         try:
             result = self._well_known_cache[server_name]
         except KeyError:
-            # TODO: should we linearise so that we don't end up doing two .well-known
-            # requests for the same server in parallel?
             result, cache_period = await self._do_get_well_known(server_name)
 
             if cache_period > 0:
@@ -334,81 +263,61 @@ class MatrixFederationAgent:
     async def _do_get_well_known(
         self, server_name: bytes
     ) -> tuple[bytes | None, float]:
-        """Actually fetch and parse a .well-known, without checking the cache
+        """Actually fetch and parse a .well-known, without checking the cache.
 
-        :param server_name: Name of the server, from the requested url
+        :param server_name: Name of the server, from the requested url.
 
         :returns a tuple of (result, cache period), where result is one of:
-            - the new server name from the .well-known (as a `bytes`)
+            - the new server name from the .well-known (as ``bytes``)
             - None if there was no .well-known file.
-            - INVALID_WELL_KNOWN if the .well-known was invalid
         """
-        uri = b"https://%s/.well-known/matrix/server" % (server_name,)
-        uri_str = uri.decode("ascii")
-        logger.info("Fetching %s", uri_str)
+        uri = "https://{}/.well-known/matrix/server".format(server_name.decode("ascii"))
+        logger.info("Fetching %s", uri)
         cache_period: float | None
         try:
-            response = await self._well_known_agent.request(b"GET", uri)
-            body = await read_body_with_max_size(response, WELL_KNOWN_MAX_SIZE)
-            if response.code != 200:
-                raise Exception(f"Non-200 response {response.code}")
+            async with self._session.get(uri) as response:
+                body = await response.read()
+                if len(body) > WELL_KNOWN_MAX_SIZE:
+                    raise BodyExceededMaxSize()
+                if response.status != 200:
+                    raise Exception(f"Non-200 response {response.status}")
 
-            parsed_body = json_decoder.decode(body.decode("utf-8"))
-            logger.info("Response from .well-known: %s", parsed_body)
-            if not isinstance(parsed_body, dict):
-                raise Exception("not a dict")
-            if "m.server" not in parsed_body:
-                raise Exception("Missing key 'm.server'")
-            if not isinstance(parsed_body["m.server"], str):
-                raise TypeError("m.server must be a string")
+                parsed_body = json_decoder.decode(body.decode("utf-8"))
+                logger.info("Response from .well-known: %s", parsed_body)
+                if not isinstance(parsed_body, dict):
+                    raise Exception("not a dict")
+                if "m.server" not in parsed_body:
+                    raise Exception("Missing key 'm.server'")
+                if not isinstance(parsed_body["m.server"], str):
+                    raise TypeError("m.server must be a string")
+
+                result_value: bytes = parsed_body["m.server"].encode("ascii")
+
+                cache_period = _cache_period_from_headers(response.headers)
+                if cache_period is None:
+                    cache_period = WELL_KNOWN_DEFAULT_CACHE_PERIOD
+                    cache_period += random.uniform(
+                        0, WELL_KNOWN_DEFAULT_CACHE_PERIOD_JITTER
+                    )
+                else:
+                    cache_period = min(cache_period, WELL_KNOWN_MAX_CACHE_PERIOD)
+
+                return (result_value, cache_period)
         except Exception as e:
-            logger.info("Error fetching %s: %s", uri_str, e)
+            logger.info("Error fetching %s: %s", uri, e)
 
-            # add some randomness to the TTL to avoid a stampeding herd every hour
-            # after startup
             cache_period = WELL_KNOWN_INVALID_CACHE_PERIOD
             cache_period += random.uniform(0, WELL_KNOWN_DEFAULT_CACHE_PERIOD_JITTER)
             return (None, cache_period)
 
-        result = parsed_body["m.server"].encode("ascii")
-
-        cache_period = _cache_period_from_headers(
-            response.headers,
-            time_now=self._reactor.seconds,
-        )
-        if cache_period is None:
-            cache_period = WELL_KNOWN_DEFAULT_CACHE_PERIOD
-            # add some randomness to the TTL to avoid a stampeding herd every 24 hours
-            # after startup
-            cache_period += random.uniform(0, WELL_KNOWN_DEFAULT_CACHE_PERIOD_JITTER)
-        else:
-            cache_period = min(cache_period, WELL_KNOWN_MAX_CACHE_PERIOD)
-
-        return (result, cache_period)
-
-
-@implementer(IStreamClientEndpoint)
-class LoggingHostnameEndpoint:
-    """A wrapper for HostnameEndpint which logs when it connects"""
-
-    def __init__(
-        self, reactor: IReactorTime, host: bytes, port: int, *args: Any, **kwargs: Any
-    ):
-        self.host = host
-        self.port = port
-        self.ep = HostnameEndpoint(reactor, host, port, *args, **kwargs)
-        logger.info("Endpoint created with %s:%d", host, port)
-
-    def connect(
-        self, protocol_factory: IProtocolFactory
-    ) -> "defer.Deferred[IProtocol]":
-        logger.info("Connecting to %s:%i", self.host.decode("ascii"), self.port)
-        return self.ep.connect(protocol_factory)
-
 
 def _cache_period_from_headers(
-    headers: Headers, time_now: Callable[[], float] = time.time
+    headers: Any, time_now: Callable[[], float] = time.time
 ) -> float | None:
+    """Extract a cache period from HTTP response headers.
+
+    Checks Cache-Control and Expires headers.
+    """
     cache_controls = _parse_cache_control(headers)
 
     if b"no-store" in cache_controls:
@@ -421,12 +330,12 @@ def _cache_period_from_headers(
         except ValueError:
             pass
 
-    expires = headers.getRawHeaders(b"expires")
-    if expires is not None:
+    expires_header = headers.get("Expires")
+    if expires_header is not None:
         try:
-            expires_date = stringToDatetime(expires[-1])
-            return expires_date - time_now()
-        except ValueError:
+            expires_date = parsedate_to_datetime(expires_header)
+            return float(expires_date.timestamp() - time_now())
+        except (ValueError, TypeError):
             # RFC7234 says 'A cache recipient MUST interpret invalid date formats,
             # especially the value "0", as representing a time in the past (i.e.,
             # "already expired").
@@ -435,22 +344,27 @@ def _cache_period_from_headers(
     return None
 
 
-def _parse_cache_control(headers: Headers) -> dict[bytes, bytes | None]:
+def _parse_cache_control(headers: Any) -> dict[bytes, bytes | None]:
+    """Parse Cache-Control headers from an aiohttp response."""
     cache_controls: dict[bytes, bytes | None] = {}
-    for hdr in headers.getRawHeaders(b"cache-control", []):
-        for directive in hdr.split(b","):
-            splits = [x.strip() for x in directive.split(b"=", 1)]
-            k = splits[0].lower()
-            v = splits[1] if len(splits) > 1 else None
-            cache_controls[k] = v
+    cc_header = headers.get("Cache-Control")
+    if cc_header is None:
+        return cache_controls
+    for directive in cc_header.encode("ascii").split(b","):
+        splits = [x.strip() for x in directive.split(b"=", 1)]
+        k = splits[0].lower()
+        v = splits[1] if len(splits) > 1 else None
+        cache_controls[k] = v
     return cache_controls
 
 
 @attr.s(frozen=True, slots=True, auto_attribs=True)
 class _RoutingResult:
-    """The result returned by `_route_matrix_uri`.
+    """The result returned by ``_route_matrix_uri``.
+
     Contains the parameters needed to direct a federation connection to a particular
     server.
+
     Where a SRV record points to several servers, this object contains a single server
     chosen from the list.
     """

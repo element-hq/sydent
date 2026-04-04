@@ -7,39 +7,23 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from typing import TYPE_CHECKING
-
-from twisted.web.server import Request
+from aiohttp import web
 
 from sydent.http.auth import authV2
-from sydent.http.servlets import SydentResource, jsonwrap, send_cors
-from sydent.types import JsonDict
-
-if TYPE_CHECKING:
-    from sydent.sydent import Sydent
+from sydent.http.servlets import json_response
 
 
-class AccountServlet(SydentResource):
-    isLeaf = False
+async def handle_account_get(request: web.Request) -> web.Response:
+    """
+    Return information about the user's account
+    (essentially just a 'who am i')
+    """
+    sydent = request.app["sydent"]
 
-    def __init__(self, syd: "Sydent") -> None:
-        super().__init__()
-        self.sydent = syd
+    account = await authV2(sydent, request)
 
-    @jsonwrap
-    def render_GET(self, request: Request) -> JsonDict:
-        """
-        Return information about the user's account
-        (essentially just a 'who am i')
-        """
-        send_cors(request)
-
-        account = authV2(self.sydent, request)
-
-        return {
+    return json_response(
+        {
             "user_id": account.userId,
         }
-
-    def render_OPTIONS(self, request: Request) -> bytes:
-        send_cors(request)
-        return b""
+    )

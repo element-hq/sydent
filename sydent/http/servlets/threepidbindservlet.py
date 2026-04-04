@@ -8,20 +8,11 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from typing import TYPE_CHECKING
-
-from twisted.web.server import Request
+from aiohttp import web
 
 from sydent.db.valsession import ThreePidValSessionStore
 from sydent.http.auth import authV2
-from sydent.http.servlets import (
-    MatrixRestError,
-    SydentResource,
-    get_args,
-    jsonwrap,
-    send_cors,
-)
-from sydent.types import JsonDict
+from sydent.http.servlets import MatrixRestError, get_args, json_response
 from sydent.util.stringutils import is_valid_client_secret
 from sydent.validators import (
     IncorrectClientSecretException,
@@ -30,72 +21,55 @@ from sydent.validators import (
     SessionNotValidatedException,
 )
 
-if TYPE_CHECKING:
-    from sydent.sydent import Sydent
 
+async def handle_threepid_bind_post(
+    request: web.Request, require_auth: bool = False
+) -> web.Response:
+    sydent = request.app["sydent"]
 
-class ThreePidBindServlet(SydentResource):
-    def __init__(self, sydent: "Sydent", require_auth: bool = False) -> None:
-        super().__init__()
-        self.sydent = sydent
-        self.require_auth = require_auth
+    account = None
+    if require_auth:
+        account = await authV2(sydent, request)
 
-    @jsonwrap
-    def render_POST(self, request: Request) -> JsonDict:
-        send_cors(request)
+    args = await get_args(request, ("sid", "client_secret", "mxid"))
 
-        account = None
-        if self.require_auth:
-            account = authV2(self.sydent, request)
+    sid = args["sid"]
+    mxid = args["mxid"]
+    clientSecret = args["client_secret"]
 
-        args = get_args(request, ("sid", "client_secret", "mxid"))
+    if not is_valid_client_secret(clientSecret):
+        raise MatrixRestError(400, "M_INVALID_PARAM", "Invalid client_secret provided")
 
-        sid = args["sid"]
-        mxid = args["mxid"]
-        clientSecret = args["client_secret"]
-
-        if not is_valid_client_secret(clientSecret):
+    if account:
+        # This is a v2 API so only allow binding to the logged in user id
+        if account.userId != mxid:
             raise MatrixRestError(
-                400, "M_INVALID_PARAM", "Invalid client_secret provided"
+                403,
+                "M_UNAUTHORIZED",
+                "This user is prohibited from binding to the mxid",
             )
 
-        if account:
-            # This is a v2 API so only allow binding to the logged in user id
-            if account.userId != mxid:
-                raise MatrixRestError(
-                    403,
-                    "M_UNAUTHORIZED",
-                    "This user is prohibited from binding to the mxid",
-                )
+    try:
+        valSessionStore = ThreePidValSessionStore(sydent)
+        s = valSessionStore.getValidatedSession(sid, clientSecret)
+    except (IncorrectClientSecretException, InvalidSessionIdException):
+        raise MatrixRestError(
+            404,
+            "M_NO_VALID_SESSION",
+            "No valid session was found matching that sid and client secret",
+        ) from None
+    except SessionExpiredException:
+        raise MatrixRestError(
+            400,
+            "M_SESSION_EXPIRED",
+            "This validation session has expired: call requestToken again",
+        ) from None
+    except SessionNotValidatedException:
+        raise MatrixRestError(
+            400,
+            "M_SESSION_NOT_VALIDATED",
+            "This validation session has not yet been completed",
+        ) from None
 
-        try:
-            valSessionStore = ThreePidValSessionStore(self.sydent)
-            s = valSessionStore.getValidatedSession(sid, clientSecret)
-        except (IncorrectClientSecretException, InvalidSessionIdException) as e:
-            # Return the same error for not found / bad client secret otherwise
-            # people can get information about sessions without knowing the
-            # secret.
-            raise MatrixRestError(
-                404,
-                "M_NO_VALID_SESSION",
-                "No valid session was found matching that sid and client secret",
-            ) from e
-        except SessionExpiredException as e:
-            raise MatrixRestError(
-                400,
-                "M_SESSION_EXPIRED",
-                "This validation session has expired: call requestToken again",
-            ) from e
-        except SessionNotValidatedException as e:
-            raise MatrixRestError(
-                400,
-                "M_SESSION_NOT_VALIDATED",
-                "This validation session has not yet been completed",
-            ) from e
-
-        res = self.sydent.threepidBinder.addBinding(s.medium, s.address, mxid)
-        return res
-
-    def render_OPTIONS(self, request: Request) -> bytes:
-        send_cors(request)
-        return b""
+    res = sydent.threepidBinder.addBinding(s.medium, s.address, mxid)
+    return json_response(res)

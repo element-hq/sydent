@@ -7,14 +7,11 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from typing import TYPE_CHECKING
-
-from twisted.web.server import Request
+from aiohttp import web
 
 from sydent.db.valsession import ThreePidValSessionStore
 from sydent.http.auth import authV2
-from sydent.http.servlets import SydentResource, get_args, jsonwrap, send_cors
-from sydent.types import JsonDict
+from sydent.http.servlets import get_args, json_response
 from sydent.util.stringutils import is_valid_client_secret
 from sydent.validators import (
     IncorrectClientSecretException,
@@ -23,63 +20,57 @@ from sydent.validators import (
     SessionNotValidatedException,
 )
 
-if TYPE_CHECKING:
-    from sydent.sydent import Sydent
 
+async def handle_get_validated_3pid_get(
+    request: web.Request, require_auth: bool = False
+) -> web.Response:
+    sydent = request.app["sydent"]
 
-class GetValidated3pidServlet(SydentResource):
-    isLeaf = True
+    if require_auth:
+        await authV2(sydent, request)
 
-    def __init__(self, syd: "Sydent", require_auth: bool = False) -> None:
-        super().__init__()
-        self.sydent = syd
-        self.require_auth = require_auth
+    args = await get_args(request, ("sid", "client_secret"))
 
-    @jsonwrap
-    def render_GET(self, request: Request) -> JsonDict:
-        send_cors(request)
-        if self.require_auth:
-            authV2(self.sydent, request)
+    sid = args["sid"]
+    clientSecret = args["client_secret"]
 
-        args = get_args(request, ("sid", "client_secret"))
-
-        sid = args["sid"]
-        clientSecret = args["client_secret"]
-
-        if not is_valid_client_secret(clientSecret):
-            request.setResponseCode(400)
-            return {
+    if not is_valid_client_secret(clientSecret):
+        return json_response(
+            {
                 "errcode": "M_INVALID_PARAM",
                 "error": "Invalid client_secret provided",
-            }
+            },
+            status=400,
+        )
 
-        valSessionStore = ThreePidValSessionStore(self.sydent)
+    valSessionStore = ThreePidValSessionStore(sydent)
 
-        noMatchError = {
-            "errcode": "M_NO_VALID_SESSION",
-            "error": "No valid session was found matching that sid and client secret",
-        }
+    noMatchError = {
+        "errcode": "M_NO_VALID_SESSION",
+        "error": "No valid session was found matching that sid and client secret",
+    }
 
-        try:
-            s = valSessionStore.getValidatedSession(sid, clientSecret)
-        except (IncorrectClientSecretException, InvalidSessionIdException):
-            request.setResponseCode(404)
-            return noMatchError
-        except SessionExpiredException:
-            request.setResponseCode(400)
-            return {
+    try:
+        s = valSessionStore.getValidatedSession(sid, clientSecret)
+    except (IncorrectClientSecretException, InvalidSessionIdException):
+        return json_response(noMatchError, status=404)
+    except SessionExpiredException:
+        return json_response(
+            {
                 "errcode": "M_SESSION_EXPIRED",
                 "error": "This validation session has expired: call requestToken again",
-            }
-        except SessionNotValidatedException:
-            request.setResponseCode(400)
-            return {
+            },
+            status=400,
+        )
+    except SessionNotValidatedException:
+        return json_response(
+            {
                 "errcode": "M_SESSION_NOT_VALIDATED",
                 "error": "This validation session has not yet been completed",
-            }
+            },
+            status=400,
+        )
 
-        return {"medium": s.medium, "address": s.address, "validated_at": s.mtime}
-
-    def render_OPTIONS(self, request: Request) -> bytes:
-        send_cors(request)
-        return b""
+    return json_response(
+        {"medium": s.medium, "address": s.address, "validated_at": s.mtime}
+    )

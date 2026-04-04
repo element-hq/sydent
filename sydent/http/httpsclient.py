@@ -9,16 +9,10 @@
 
 import json
 import logging
-from io import BytesIO
-from typing import TYPE_CHECKING, Optional
+import ssl
+from typing import TYPE_CHECKING
 
-from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
-from twisted.internet.ssl import optionsForClientTLS
-from twisted.web.client import Agent, FileBodyProducer, Response
-from twisted.web.http_headers import Headers
-from twisted.web.iweb import IPolicyForHTTPS
-from zope.interface import implementer
+import aiohttp
 
 from sydent.types import JsonDict
 
@@ -30,61 +24,77 @@ logger = logging.getLogger(__name__)
 
 class ReplicationHttpsClient:
     """
-    An HTTPS client specifically for talking replication to other Matrix Identity Servers
-    (ie. presents our replication SSL certificate and validates peer SSL certificates as we would in the
-    replication HTTPS server)
+    An HTTPS client specifically for talking replication to other Matrix
+    Identity Servers (i.e. presents our replication SSL certificate and
+    validates peer SSL certificates as we would in the replication HTTPS
+    server).
     """
 
     def __init__(self, sydent: "Sydent") -> None:
         self.sydent = sydent
-        self.agent: Agent | None = None
+        self.session: aiohttp.ClientSession | None = None
 
-        if self.sydent.sslComponents.myPrivateCertificate:
-            # We will already have logged a warn if this is absent, so don't do it again
-            # cert = self.sydent.sslComponents.myPrivateCertificate
-            # self.certOptions = twisted.internet.ssl.CertificateOptions(privateKey=cert.privateKey.original,
-            #                                                      certificate=cert.original,
-            #                                                      trustRoot=self.sydent.sslComponents.trustRoot)
-            self.agent = Agent(self.sydent.reactor, SydentPolicyForHTTPS(self.sydent))
+    async def start(self) -> None:
+        """Create the aiohttp session. Must be called within a running event loop."""
+        ssl_ctx = self._make_ssl_context()
+        if ssl_ctx is not None:
+            connector = aiohttp.TCPConnector(ssl=ssl_ctx)
+            self.session = aiohttp.ClientSession(connector=connector)
 
-    def postJson(
+    async def stop(self) -> None:
+        if self.session and not self.session.closed:
+            await self.session.close()
+
+    async def postJson(
         self, uri: str, jsonObject: JsonDict
-    ) -> Optional["Deferred[Response]"]:
+    ) -> aiohttp.ClientResponse | None:
         """
-        Sends an POST request over HTTPS.
+        Sends a POST request over HTTPS.
 
         :param uri: The URI to send the request to.
         :param jsonObject: The request's body.
 
-        :return: The request's response.
+        :return: The response, or None if HTTPS is not configured.
         """
         logger.debug("POSTing request to %s", uri)
-        if not self.agent:
+        if not self.session:
             logger.error("HTTPS post attempted but HTTPS is not configured")
             return None
 
-        headers = Headers(
-            {"Content-Type": ["application/json"], "User-Agent": ["Sydent"]}
-        )
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "Sydent",
+        }
 
         json_bytes = json.dumps(jsonObject).encode("utf8")
-        reqDeferred = self.agent.request(
-            b"POST", uri.encode("utf8"), headers, FileBodyProducer(BytesIO(json_bytes))
-        )
+        resp = await self.session.post(uri, data=json_bytes, headers=headers)
+        return resp
 
-        return reqDeferred  # type: ignore[return-value]
+    def _make_ssl_context(self) -> ssl.SSLContext | None:
+        """Build a client SSL context for mutual TLS replication."""
+        if self.sydent.sslComponents.ssl_context is None:
+            return None
 
+        cert_file = self.sydent.config.http.cert_file
+        if not cert_file:
+            return None
 
-@implementer(IPolicyForHTTPS)
-class SydentPolicyForHTTPS:
-    def __init__(self, sydent: "Sydent") -> None:
-        self.sydent = sydent
+        ctx = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH)
+        try:
+            ctx.load_cert_chain(cert_file)
+        except OSError:
+            logger.warning(
+                "Unable to load client cert chain from %s for replication",
+                cert_file,
+            )
+            return None
 
-    def creatorForNetloc(
-        self, hostname: bytes, port: int
-    ) -> IOpenSSLClientConnectionCreator:
-        return optionsForClientTLS(
-            hostname.decode("ascii"),
-            trustRoot=self.sydent.sslComponents.trustRoot,
-            clientCertificate=self.sydent.sslComponents.myPrivateCertificate,
-        )
+        ca_cert = self.sydent.config.http.ca_cert_file
+        if ca_cert:
+            try:
+                ctx.load_verify_locations(ca_cert)
+            except Exception:
+                logger.warning("Failed to load CA cert file %s", ca_cert)
+                raise
+
+        return ctx

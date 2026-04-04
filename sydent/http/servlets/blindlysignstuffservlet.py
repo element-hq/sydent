@@ -8,74 +8,50 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import logging
-from typing import TYPE_CHECKING
 
 import signedjson.key
 import signedjson.sign
-from twisted.web.server import Request
+from aiohttp import web
 
 from sydent.db.invite_tokens import JoinTokenStore
 from sydent.http.auth import authV2
-from sydent.http.servlets import (
-    MatrixRestError,
-    SydentResource,
-    get_args,
-    jsonwrap,
-    send_cors,
-)
-from sydent.types import JsonDict
-
-if TYPE_CHECKING:
-    from sydent.sydent import Sydent
+from sydent.http.servlets import MatrixRestError, get_args, json_response
 
 logger = logging.getLogger(__name__)
 
 
-class BlindlySignStuffServlet(SydentResource):
-    isLeaf = True
+async def handle_blindly_sign_stuff_post(
+    request: web.Request, require_auth: bool = False
+) -> web.Response:
+    sydent = request.app["sydent"]
+    server_name = sydent.config.general.server_name
+    tokenStore = JoinTokenStore(sydent)
 
-    def __init__(self, syd: "Sydent", require_auth: bool = False) -> None:
-        super().__init__()
-        self.sydent = syd
-        self.server_name = syd.config.general.server_name
-        self.tokenStore = JoinTokenStore(syd)
-        self.require_auth = require_auth
+    if require_auth:
+        await authV2(sydent, request)
 
-    @jsonwrap
-    def render_POST(self, request: Request) -> JsonDict:
-        send_cors(request)
+    args = await get_args(request, ("private_key", "token", "mxid"))
 
-        if self.require_auth:
-            authV2(self.sydent, request)
+    private_key_base64 = args["private_key"]
+    token = args["token"]
+    mxid = args["mxid"]
 
-        args = get_args(request, ("private_key", "token", "mxid"))
+    sender = tokenStore.getSenderForToken(token)
+    if sender is None:
+        raise MatrixRestError(404, "M_UNRECOGNIZED", "Didn't recognize token")
 
-        private_key_base64 = args["private_key"]
-        token = args["token"]
-        mxid = args["mxid"]
+    to_sign = {
+        "mxid": mxid,
+        "sender": sender,
+        "token": token,
+    }
+    try:
+        private_key = signedjson.key.decode_signing_key_base64(
+            "ed25519", "0", private_key_base64
+        )
+        signed = signedjson.sign.sign_json(to_sign, server_name, private_key)
+    except Exception:
+        logger.exception("signing failed")
+        raise MatrixRestError(500, "M_UNKNOWN", "Internal Server Error") from None
 
-        sender = self.tokenStore.getSenderForToken(token)
-        if sender is None:
-            raise MatrixRestError(404, "M_UNRECOGNIZED", "Didn't recognize token")
-
-        to_sign = {
-            "mxid": mxid,
-            "sender": sender,
-            "token": token,
-        }
-        try:
-            private_key = signedjson.key.decode_signing_key_base64(
-                "ed25519", "0", private_key_base64
-            )
-            signed: JsonDict = signedjson.sign.sign_json(
-                to_sign, self.server_name, private_key
-            )
-        except Exception as e:
-            logger.exception("signing failed")
-            raise MatrixRestError(500, "M_UNKNOWN", "Internal Server Error") from e
-
-        return signed
-
-    def render_OPTIONS(self, request: Request) -> bytes:
-        send_cors(request)
-        return b""
+    return json_response(signed)

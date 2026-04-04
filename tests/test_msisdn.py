@@ -6,114 +6,87 @@
 #
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
+
 import os.path
 from unittest.mock import AsyncMock, Mock, patch
 
-import attr
-from twisted.trial import unittest
+import pytest
+from aiohttp.test_utils import TestClient, TestServer
 
-from sydent.types import JsonDict
-
-from tests.utils import make_request, make_sydent
+from tests.utils import make_sydent
 
 
-@attr.s(auto_attribs=True)
-class FakeHeader:
-    """
-    A fake header object
-    """
-
-    headers: dict
-
-    def getAllRawHeaders(self):
-        return self.headers
-
-
-@attr.s(auto_attribs=True)
-class FakeResponse:
-    """A fake twisted.web.IResponse object"""
-
-    # HTTP response code
-    code: int
-
-    # Fake Header
-    headers: FakeHeader
+@pytest.fixture
+def sydent():
+    config = {
+        "general": {
+            "templates.path": os.path.join(
+                os.path.dirname(os.path.dirname(__file__)), "res"
+            ),
+        },
+    }
+    return make_sydent(test_config=config)
 
 
-class TestRequestCode(unittest.TestCase):
-    def setUp(self) -> None:
-        # Create a new sydent
-        config = {
-            "general": {
-                "templates.path": os.path.join(
-                    os.path.dirname(os.path.dirname(__file__)), "res"
-                ),
-            },
-        }
-        self.sydent = make_sydent(test_config=config)
+@pytest.fixture
+async def client(sydent):
+    app = sydent.clientApiHttpServer.app
+    async with TestClient(TestServer(app)) as client:
+        yield client
 
-    def _make_request(self, url: str, body: JsonDict | None = None) -> Mock:
-        # Patch out the SMS sending so we can investigate the resulting call.
-        with patch(
-            "sydent.sms.openmarket.OpenMarketSMS.sendTextSMS",
-            new_callable=AsyncMock,
-        ) as sendTextSMS:
-            request, channel = make_request(
-                self.sydent.reactor,
-                self.sydent.clientApiHttpServer.factory,
-                "POST",
-                url,
-                body,
-            )
-            self.assertEqual(channel.code, 200)
 
-        return sendTextSMS
+async def test_request_code(client):
+    with patch(
+        "sydent.sms.openmarket.OpenMarketSMS.sendTextSMS",
+        new_callable=AsyncMock,
+    ) as sendTextSMS:
+        sendTextSMS.return_value = Mock()
 
-    def test_request_code(self) -> None:
-        self.sydent.run()
-
-        sendSMS_mock = self._make_request(
+        resp = await client.post(
             "/_matrix/identity/api/v1/validate/msisdn/requestToken",
-            {
+            json={
                 "phone_number": "447700900750",
                 "country": "GB",
                 "client_secret": "oursecret",
                 "send_attempt": 0,
             },
         )
-        sendSMS_mock.assert_called_once()
+        assert resp.status == 200
+        sendTextSMS.assert_called_once()
 
-    def test_request_code_via_url_query_params(self) -> None:
-        self.sydent.run()
-        url = (
-            "/_matrix/identity/api/v1/validate/msisdn/requestToken?"
-            "phone_number=447700900750"
-            "&country=GB"
-            "&client_secret=oursecret"
-            "&send_attempt=0"
-        )
-        sendSMS_mock = self._make_request(url)
-        sendSMS_mock.assert_called_once()
 
-    @patch("sydent.http.httpclient.HTTPClient.post_json_maybe_get_json")
-    def test_bad_api_response_raises_exception(self, post_json: Mock) -> None:
-        """Test that an error response from OpenMarket raises an exception
-        and that the requester receives an error code."""
+async def test_request_code_via_url_query_params(client):
+    url = (
+        "/_matrix/identity/api/v1/validate/msisdn/requestToken?"
+        "phone_number=447700900750"
+        "&country=GB"
+        "&client_secret=oursecret"
+        "&send_attempt=0"
+    )
+    with patch(
+        "sydent.sms.openmarket.OpenMarketSMS.sendTextSMS",
+        new_callable=AsyncMock,
+    ) as sendTextSMS:
+        sendTextSMS.return_value = Mock()
 
-        header = FakeHeader({})
-        resp = FakeResponse(code=400, headers=header), {}
-        post_json.return_value = resp
-        self.sydent.run()
-        request, channel = make_request(
-            self.sydent.reactor,
-            self.sydent.clientApiHttpServer.factory,
-            "POST",
-            "/_matrix/identity/api/v1/validate/msisdn/requestToken",
-            {
-                "phone_number": "447700900750",
-                "country": "GB",
-                "client_secret": "oursecret",
-                "send_attempt": 0,
-            },
-        )
-        self.assertEqual(channel.code, 500)
+        resp = await client.post(url)
+        assert resp.status == 200
+        sendTextSMS.assert_called_once()
+
+
+@patch("sydent.http.httpclient.HTTPClient.post_json_maybe_get_json")
+async def test_bad_api_response_raises_exception(post_json, client):
+    """Test that an error response from OpenMarket raises an exception
+    and that the requester receives an error code."""
+    post_json.return_value = (Mock(status=400, headers={}), {})
+
+    resp = await client.post(
+        "/_matrix/identity/api/v1/validate/msisdn/requestToken",
+        json={
+            "phone_number": "447700900750",
+            "country": "GB",
+            "client_secret": "oursecret",
+            "send_attempt": 0,
+        },
+    )
+    assert resp.status == 500

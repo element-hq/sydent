@@ -25,8 +25,8 @@ Signature = dict[str, str]
 
 @attr.s(frozen=True, slots=True, auto_attribs=True)
 class SignedMatrixRequest:
-    method: bytes
-    uri: bytes
+    method: str
+    uri: str
     destination_is: str
     signatures: dict[str, Signature]
     origin: str

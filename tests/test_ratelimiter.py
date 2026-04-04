@@ -7,80 +7,81 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-
-from twisted.test.proto_helpers import MemoryReactorClock
-from twisted.trial import unittest
+import pytest
 
 from sydent.util.ratelimiter import LimitExceededException, Ratelimiter
 
 
-class RatelimiterTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.clock = MemoryReactorClock()
-        self.ratelimiter = Ratelimiter(self.clock, burst=5, rate_hz=0.5)
+def _make_ratelimiter(burst: int = 5, rate_hz: float = 0.5) -> Ratelimiter[str]:
+    """Create a Ratelimiter for testing without starting the async drain loop."""
+    rl: Ratelimiter[str] = object.__new__(Ratelimiter)
+    rl._burst = burst
+    rl._buckets = {}
+    rl._rate_hz = rate_hz
+    rl._task = None
+    return rl
 
-    def test_simple(self) -> None:
-        """Test that a request doesn't get ratelimited to start off with"""
-        key = "key"
 
-        # This should not raise as we're below the ratelimit
-        self.ratelimiter.ratelimit(key)
+def test_simple() -> None:
+    """A single request doesn't get ratelimited."""
+    rl = _make_ratelimiter(burst=5)
+    rl.ratelimit("key")
 
-    def test_burst(self) -> None:
-        """Test that we can send `burst` number of messages before getting
-        ratelimited
-        """
-        key = "key"
 
-        # This should not raise as we're below the ratelimit
-        for _ in range(5):
-            self.ratelimiter.ratelimit(key)
+def test_burst() -> None:
+    """We can send `burst` messages before getting ratelimited."""
+    rl = _make_ratelimiter(burst=5)
 
-        with self.assertRaises(LimitExceededException):
-            self.ratelimiter.ratelimit(key)
+    for _ in range(5):
+        rl.ratelimit("key")
 
-    def test_burst_reset(self) -> None:
-        """Test that once we hit the ratelimit we can wait a while and we'll be
-        able to send requests again
-        """
-        key = "key"
+    with pytest.raises(LimitExceededException):
+        rl.ratelimit("key")
 
-        # This should not raise as we're below the ratelimit
-        for _ in range(5):
-            self.ratelimiter.ratelimit(key)
 
-        with self.assertRaises(LimitExceededException):
-            self.ratelimiter.ratelimit(key)
+def test_burst_reset() -> None:
+    """After hitting the limit, draining buckets allows sending again."""
+    rl = _make_ratelimiter(burst=5)
 
-        self.clock.pump([2.0] * 5)
+    for _ in range(5):
+        rl.ratelimit("key")
 
-        for _ in range(5):
-            self.ratelimiter.ratelimit(key)
+    with pytest.raises(LimitExceededException):
+        rl.ratelimit("key")
 
-        with self.assertRaises(LimitExceededException):
-            self.ratelimiter.ratelimit(key)
+    # Drain all tokens
+    for _ in range(10):
+        rl._periodic_call()
 
-    def test_average_rate(self):
-        """Test that sending requests at a rate higher than the maximum rate
-        gets ratelimited.
-        """
-        key = "key"
+    # Should be able to send again
+    for _ in range(5):
+        rl.ratelimit("key")
 
-        with self.assertRaises(LimitExceededException):
-            for _ in range(100):
-                self.clock.advance(1)
-                self.ratelimiter.ratelimit(key)
+    with pytest.raises(LimitExceededException):
+        rl.ratelimit("key")
 
-    def test_average_rate_burst(self):
-        """Test that if we go above the maximum rate we'll get ratelimited"""
-        key = "key"
 
-        for _ in range(5):
-            self.ratelimiter.ratelimit(key)
+def test_average_rate() -> None:
+    """Sending faster than the drain rate eventually gets ratelimited."""
+    rl = _make_ratelimiter(burst=5)
 
+    # Send 2 requests per drain cycle — net +1 per cycle, fills burst after 5 cycles
+    with pytest.raises(LimitExceededException):
         for _ in range(100):
-            self.clock.advance(2)
-            self.ratelimiter.ratelimit(key)
+            rl._periodic_call()
+            rl.ratelimit("key")
+            rl.ratelimit("key")
 
-        with self.assertRaises(LimitExceededException):
-            self.ratelimiter.ratelimit(key)
+
+def test_sustained_rate_within_limit() -> None:
+    """Sending at exactly the drain rate never gets limited (after burst fills)."""
+    rl = _make_ratelimiter(burst=5)
+
+    # Fill burst
+    for _ in range(5):
+        rl.ratelimit("key")
+
+    # Now send 1 per drain — bucket stays at 5 (drain 1, add 1)
+    for _ in range(100):
+        rl._periodic_call()
+        rl.ratelimit("key")

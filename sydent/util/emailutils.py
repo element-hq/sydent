@@ -17,7 +17,6 @@ import urllib
 from html import escape
 from typing import TYPE_CHECKING
 
-import twisted.python.log
 from prometheus_client import Counter
 
 from sydent.util import time_msec
@@ -53,7 +52,7 @@ def sendEmail(
     myHostname = sydent.config.email.host_name
 
     midRandom = "".join([random.choice(string.ascii_letters) for _ in range(16)])
-    messageid = f"<{time_msec():d}{midRandom}@{myHostname}>"
+    messageid = f"<{time_msec()}{midRandom}@{myHostname}>"
 
     substitutions.update(
         {
@@ -123,7 +122,7 @@ def sendEmail(
         smtp.quit()
     except Exception as origException:
         if log_send_errors:
-            twisted.python.log.err()
+            logger.exception("Error sending email")
         raise EmailSendException() from origException
 
 

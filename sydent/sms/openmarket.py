@@ -11,8 +11,6 @@ import logging
 from base64 import b64encode
 from typing import TYPE_CHECKING, cast
 
-from twisted.web.http_headers import Headers
-
 from sydent.http.httpclient import SimpleHttpClient
 from sydent.sms.types import SendSMSBody, TypeOfNumber
 from sydent.types import JsonDict
@@ -84,28 +82,22 @@ class OpenMarketSMS:
         password = self.sydent.config.sms.api_password
 
         b64creds = b64encode(b"%s:%s" % (username, password))
-        req_headers = Headers(
-            {
-                b"Authorization": [b"Basic " + b64creds],
-                b"Content-Type": [b"application/json"],
-            }
-        )
+        req_headers = {
+            "Authorization": "Basic " + b64creds.decode("ascii"),
+            "Content-Type": "application/json",
+        }
 
-        # Type safety: The case from a TypedDict to a regular Dict is required
+        # Type safety: The cast from a TypedDict to a regular Dict is required
         # because the two are deliberately not compatible. See
         #    https://github.com/python/mypy/issues/4976
-        # for details, but in a nutshell: Dicts can have keys added or removed,
-        # and that would break the invariants that a TypedDict is there to check.
-        # The case below is safe because we never use send_body afterwards.
+        # for details.
         resp, response_body = await self.http_cli.post_json_maybe_get_json(
             API_BASE_URL, cast(JsonDict, send_body), {"headers": req_headers}
         )
 
-        headers = dict(resp.headers.getAllRawHeaders())
+        headers = dict(resp.headers)
 
-        request_id = None
-        if b"X-Request-Id" in headers:
-            request_id = headers[b"X-Request-Id"][0].decode("UTF-8")
+        request_id = headers.get("X-Request-Id")
 
         # Catch errors from the API. The documentation says a success code should be 202
         # Accepted, but let's be broad here just in case and accept all 2xx response
@@ -113,29 +105,29 @@ class OpenMarketSMS:
         #
         # Relevant OpenMarket API documentation:
         # https://www.openmarket.com/docs/Content/apis/v4http/send-json.htm
-        if resp.code < 200 or resp.code >= 300:
+        if resp.status < 200 or resp.status >= 300:
             if response_body is None or "error" not in response_body:
                 raise Exception(
-                    f"OpenMarket API responded with status {resp.code:d} (request ID: {request_id})"
+                    f"OpenMarket API responded with status {resp.status} (request ID: {request_id})",
                 )
 
             error = response_body["error"]
             raise Exception(
-                f"OpenMarket API responded with status {resp.code:d} (request ID: {request_id}): {error}"
+                f"OpenMarket API responded with status {resp.status} (request ID: {request_id}): {error}",
             )
 
         ticket_id = None
-        if b"Location" not in headers:
+        location = headers.get("Location")
+        if location is None:
             logger.error("Got response from sending SMS with no location header")
         else:
             # Nominally we should parse the URL, but we can just split on '/' since
             # we only care about the last part.
-            value = headers[b"Location"][0].decode("UTF-8")
-            parts = value.split("/")
+            parts = location.split("/")
             if len(parts) < 2:
                 logger.error(
                     "Got response from sending SMS with malformed location header: %s",
-                    value,
+                    location,
                 )
                 return
             else:
@@ -146,5 +138,5 @@ class OpenMarketSMS:
             " responded with code %d",
             ticket_id,
             request_id,
-            resp.code,
+            resp.status,
         )

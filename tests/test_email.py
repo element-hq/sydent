@@ -7,81 +7,80 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
-from twisted.trial import unittest
+import pytest
+from aiohttp.test_utils import TestClient, TestServer
 
-from sydent.types import JsonDict
-
-from tests.utils import make_request, make_sydent
+from tests.utils import make_sydent
 
 
-class TestRequestCode(unittest.TestCase):
-    def setUp(self) -> None:
-        # Create a new sydent
-        self.sydent = make_sydent()
+@pytest.fixture
+def sydent():
+    return make_sydent()
 
-    def _make_request(self, url: str, body: JsonDict | None = None) -> Mock:
-        # Patch out the email sending so we can investigate the resulting email.
-        with patch("sydent.util.emailutils.smtplib") as smtplib:
-            request, channel = make_request(
-                self.sydent.reactor,
-                self.sydent.clientApiHttpServer.factory,
-                "POST",
-                url,
-                body,
-            )
 
-        self.assertEqual(channel.code, 200)
+@pytest.fixture
+async def client(sydent):
+    app = sydent.clientApiHttpServer.app
+    async with TestClient(TestServer(app)) as client:
+        yield client
 
-        # Fish out the SMTP object and return it.
-        smtp = smtplib.SMTP.return_value
-        smtp.sendmail.assert_called_once()
 
-        return smtp
-
-    def test_request_code(self) -> None:
-        self.sydent.run()
-
-        smtp = self._make_request(
+async def test_request_code(client):
+    with patch("sydent.util.emailutils.smtplib") as smtplib:
+        resp = await client.post(
             "/_matrix/identity/api/v1/validate/email/requestToken",
-            {
+            json={
                 "email": "test@test",
                 "client_secret": "oursecret",
                 "send_attempt": 0,
             },
         )
 
-        # Ensure the email is as expected.
-        email_contents = smtp.sendmail.call_args[0][2].decode("utf-8")
-        self.assertIn("Confirm your email address for Matrix", email_contents)
+    assert resp.status == 200
 
-    def test_request_code_via_url_query_params(self) -> None:
-        self.sydent.run()
-        url = (
-            "/_matrix/identity/api/v1/validate/email/requestToken?"
-            "email=test@test"
-            "&client_secret=oursecret"
-            "&send_attempt=0"
-        )
-        smtp = self._make_request(url)
+    # Ensure the email is as expected.
+    smtp = smtplib.SMTP.return_value
+    smtp.sendmail.assert_called_once()
+    email_contents = smtp.sendmail.call_args[0][2].decode("utf-8")
+    assert "Confirm your email address for Matrix" in email_contents
 
-        # Ensure the email is as expected.
-        email_contents = smtp.sendmail.call_args[0][2].decode("utf-8")
-        self.assertIn("Confirm your email address for Matrix", email_contents)
 
-    def test_branded_request_code(self) -> None:
-        self.sydent.run()
+async def test_request_code_via_url_query_params(client):
+    url = (
+        "/_matrix/identity/api/v1/validate/email/requestToken?"
+        "email=test@test"
+        "&client_secret=oursecret"
+        "&send_attempt=0"
+    )
+    with patch("sydent.util.emailutils.smtplib") as smtplib:
+        resp = await client.post(url)
 
-        smtp = self._make_request(
+    assert resp.status == 200
+
+    # Ensure the email is as expected.
+    smtp = smtplib.SMTP.return_value
+    smtp.sendmail.assert_called_once()
+    email_contents = smtp.sendmail.call_args[0][2].decode("utf-8")
+    assert "Confirm your email address for Matrix" in email_contents
+
+
+async def test_branded_request_code(client):
+    with patch("sydent.util.emailutils.smtplib") as smtplib:
+        resp = await client.post(
             "/_matrix/identity/api/v1/validate/email/requestToken?brand=vector-im",
-            {
+            json={
                 "email": "test@test",
                 "client_secret": "oursecret",
                 "send_attempt": 0,
             },
         )
 
-        # Ensure the email is as expected.
-        email_contents = smtp.sendmail.call_args[0][2].decode("utf-8")
-        self.assertIn("Confirm your email address for Element", email_contents)
+    assert resp.status == 200
+
+    # Ensure the email is as expected.
+    smtp = smtplib.SMTP.return_value
+    smtp.sendmail.assert_called_once()
+    email_contents = smtp.sendmail.call_args[0][2].decode("utf-8")
+    assert "Confirm your email address for Element" in email_contents

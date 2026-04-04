@@ -1,50 +1,52 @@
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
-from twisted.trial import unittest
-from twisted.web.client import Response
+import pytest
+from aiohttp.test_utils import TestClient, TestServer
 
 from sydent.db.invite_tokens import JoinTokenStore
-from sydent.http.httpclient import FederationHttpClient
-from sydent.http.servlets.store_invite_servlet import StoreInviteServlet
+from sydent.http.servlets.store_invite_servlet import redact_email_address
 
-from tests.utils import make_request, make_sydent
+from tests.utils import make_sydent
 
 
-class ThreepidInvitesTestCase(unittest.TestCase):
-    """Tests features related to storing and delivering 3PID invites."""
+@pytest.fixture
+def sydent():
+    config = {
+        "email": {
+            # Used by test_invited_email_address_obfuscation
+            "email.third_party_invite_username_obfuscate_characters": "6",
+            "email.third_party_invite_domain_obfuscate_characters": "8",
+            "email.third_party_invite_keyword_blocklist": "evil\nbad\nhttps://",
+        },
+    }
+    return make_sydent(test_config=config)
 
-    def setUp(self):
-        # Create a new sydent
-        config = {
-            "email": {
-                # Used by test_invited_email_address_obfuscation
-                "email.third_party_invite_username_obfuscate_characters": "6",
-                "email.third_party_invite_domain_obfuscate_characters": "8",
-                "email.third_party_invite_keyword_blocklist": "evil\nbad\nhttps://",
-            },
-        }
-        self.sydent = make_sydent(test_config=config)
 
-    def test_delete_on_bind(self):
-        """Tests that 3PID invite tokens are deleted upon delivery after a successful
-        bind.
-        """
-        self.sydent.run()
+@pytest.fixture
+async def client(sydent):
+    app = sydent.clientApiHttpServer.app
+    async with TestClient(TestServer(app)) as client:
+        yield client
 
-        # The 3PID we're working with.
-        medium = "email"
-        address = "john@example.com"
 
-        # Mock post_json_get_nothing so the /onBind call doesn't fail.
-        async def post_json_get_nothing(uri, post_json, opts):
-            return Response((b"HTTP", 1, 1), 200, b"OK", None, None)
+async def test_delete_on_bind(sydent, client):
+    """Tests that 3PID invite tokens are deleted upon delivery after a successful bind."""
+    import asyncio
 
-        FederationHttpClient.post_json_get_nothing = Mock(
-            side_effect=post_json_get_nothing,
-        )
+    medium = "email"
+    address = "john@example.com"
 
-        # Manually insert an invite token, we'll check later that it's been deleted.
-        join_token_store = JoinTokenStore(self.sydent)
+    # Mock the federation HTTP call so _notify succeeds without a real network request.
+    mock_response = Mock()
+    mock_response.status = 200
+
+    with patch(
+        "sydent.threepid.bind.FederationHttpClient",
+    ) as MockClient:
+        mock_instance = MockClient.return_value
+        mock_instance.post_json_get_nothing = AsyncMock(return_value=mock_response)
+
+        join_token_store = JoinTokenStore(sydent)
         join_token_store.storeToken(
             medium,
             address,
@@ -53,126 +55,120 @@ class ThreepidInvitesTestCase(unittest.TestCase):
             "sometoken",
         )
 
-        # Make sure the token still exists and can be retrieved.
         tokens = join_token_store.getTokens(medium, address)
-        self.assertEqual(len(tokens), 1, tokens)
+        assert len(tokens) == 1
 
-        # Bind the 3PID
-        self.sydent.threepidBinder.addBinding(
+        # addBinding is synchronous, but creates an asyncio task for _notify
+        sydent.threepidBinder.addBinding(
             medium,
             address,
             "@john:example.com",
         )
 
-        # Give Sydent some time to call /onBind and delete the token.
-        self.sydent.reactor.advance(1000)
+        # Let the event loop run the _notify task
+        await asyncio.sleep(0.1)
 
-        cur = self.sydent.db.cursor()
+    cur = sydent.db.cursor()
 
-        # Manually retrieve the tokens for this 3PID. We don't use getTokens because it
-        # filters out sent tokens, so would return nothing even if the token hasn't been
-        # deleted.
-        res = cur.execute(
-            "SELECT medium, address, room_id, sender, token FROM invite_tokens"
-            " WHERE medium = ? AND address = ?",
-            (
-                medium,
-                address,
-            ),
-        )
-        rows = res.fetchall()
+    # Manually retrieve the tokens for this 3PID.
+    res = cur.execute(
+        "SELECT medium, address, room_id, sender, token FROM invite_tokens"
+        " WHERE medium = ? AND address = ?",
+        (medium, address),
+    )
+    rows = res.fetchall()
 
-        # Check that we didn't get any result.
-        self.assertEqual(len(rows), 0, rows)
+    # Check that we didn't get any result.
+    assert len(rows) == 0
 
-    def test_invited_email_address_obfuscation(self):
-        """Test that email addresses included in third-party invites are properly
-        obfuscated according to the relevant config options
-        """
-        store_invite_servlet = StoreInviteServlet(self.sydent)
 
-        email_address = "1234567890@1234567890.com"
-        redacted_address = store_invite_servlet.redact_email_address(email_address)
+def test_invited_email_address_obfuscation(sydent):
+    """Test that email addresses included in third-party invites are properly
+    obfuscated according to the relevant config options.
+    """
+    email_address = "1234567890@1234567890.com"
+    result = redact_email_address(sydent, email_address)
 
-        self.assertEqual(redacted_address, "123456...@12345678...")
+    assert result == "123456...@12345678..."
 
-        # Even short addresses are redacted
-        short_email_address = "1@1.com"
-        redacted_address = store_invite_servlet.redact_email_address(
-            short_email_address
-        )
+    # Even short addresses are redacted
+    short_email_address = "1@1.com"
+    result = redact_email_address(sydent, short_email_address)
 
-        self.assertEqual(redacted_address, "...@1...")
+    assert result == "...@1..."
 
-    def test_third_party_invite_keyword_block_works(self):
-        invite_config = {
-            "medium": "email",
-            "address": "foo@example.com",
-            "room_id": "!bar",
-            "sender": "@foo:example.com",
-            "room_name": "This is an EVIL room name.",
-        }
-        request, channel = make_request(
-            self.sydent.reactor,
-            self.sydent.clientApiHttpServer.factory,
-            "POST",
+
+async def test_third_party_invite_keyword_block_works(client):
+    invite_config = {
+        "medium": "email",
+        "address": "foo@example.com",
+        "room_id": "!bar",
+        "sender": "@foo:example.com",
+        "room_name": "This is an EVIL room name.",
+    }
+    resp = await client.post(
+        "/_matrix/identity/api/v1/store-invite",
+        json=invite_config,
+    )
+    assert resp.status == 403
+
+
+async def test_third_party_invite_keyword_blocklist_exempts_web_client_location_url(
+    client,
+):
+    invite_config = {
+        "medium": "email",
+        "address": "foo@example.com",
+        "room_id": "!bar",
+        "sender": "@foo:example.com",
+        "room_name": "This is a fine room name.",
+        "org.matrix.web_client_location": "https://example.com",
+    }
+
+    # don't actually send the email
+    with patch("sydent.util.emailutils.smtplib") as smtplib:
+        resp = await client.post(
             "/_matrix/identity/api/v1/store-invite",
-            invite_config,
+            json=invite_config,
         )
-        self.assertEqual(channel.code, 403)
-
-    def test_third_party_invite_keyword_blocklist_exempts_web_client_location_url(
-        self,
-    ):
-        invite_config = {
-            "medium": "email",
-            "address": "foo@example.com",
-            "room_id": "!bar",
-            "sender": "@foo:example.com",
-            "room_name": "This is a fine room name.",
-            "org.matrix.web_client_location": "https://example.com",
-        }
-
-        # don't actually send the email
-        with patch("sydent.util.emailutils.smtplib") as smtplib:
-            request, channel = make_request(
-                self.sydent.reactor,
-                self.sydent.clientApiHttpServer.factory,
-                "POST",
-                "/_matrix/identity/api/v1/store-invite",
-                invite_config,
-            )
-        self.assertEqual(channel.code, 200)
-        smtp = smtplib.SMTP.return_value
-        # but make sure we did try to send it
-        smtp.sendmail.assert_called_once()
+    assert resp.status == 200
+    smtp = smtplib.SMTP.return_value
+    # but make sure we did try to send it
+    smtp.sendmail.assert_called_once()
 
 
-class ThreepidInvitesNoDeleteTestCase(unittest.TestCase):
+@pytest.fixture
+def no_delete_sydent():
+    config = {"general": {"delete_tokens_on_bind": "false"}}
+    return make_sydent(test_config=config)
+
+
+@pytest.fixture
+async def no_delete_client(no_delete_sydent):
+    app = no_delete_sydent.clientApiHttpServer.app
+    async with TestClient(TestServer(app)) as client:
+        yield client
+
+
+async def test_no_delete_on_bind(no_delete_sydent, no_delete_client):
     """Test that invite tokens are not deleted when that is disabled."""
+    import asyncio
 
-    def setUp(self):
-        # Create a new sydent
-        config = {"general": {"delete_tokens_on_bind": "false"}}
-        self.sydent = make_sydent(test_config=config)
+    sydent = no_delete_sydent
 
-    def test_no_delete_on_bind(self):
-        self.sydent.run()
+    medium = "email"
+    address = "john@example.com"
 
-        # The 3PID we're working with.
-        medium = "email"
-        address = "john@example.com"
+    mock_response = Mock()
+    mock_response.status = 200
 
-        # Mock post_json_get_nothing so the /onBind call doesn't fail.
-        async def post_json_get_nothing(uri, post_json, opts):
-            return Response((b"HTTP", 1, 1), 200, b"OK", None, None)
+    with patch(
+        "sydent.threepid.bind.FederationHttpClient",
+    ) as MockClient:
+        mock_instance = MockClient.return_value
+        mock_instance.post_json_get_nothing = AsyncMock(return_value=mock_response)
 
-        FederationHttpClient.post_json_get_nothing = Mock(
-            side_effect=post_json_get_nothing,
-        )
-
-        # Manually insert an invite token, we'll check later that it's been deleted.
-        join_token_store = JoinTokenStore(self.sydent)
+        join_token_store = JoinTokenStore(sydent)
         join_token_store.storeToken(
             medium,
             address,
@@ -181,34 +177,25 @@ class ThreepidInvitesNoDeleteTestCase(unittest.TestCase):
             "sometoken",
         )
 
-        # Make sure the token still exists and can be retrieved.
         tokens = join_token_store.getTokens(medium, address)
-        self.assertEqual(len(tokens), 1, tokens)
+        assert len(tokens) == 1
 
-        # Bind the 3PID
-        self.sydent.threepidBinder.addBinding(
+        sydent.threepidBinder.addBinding(
             medium,
             address,
             "@john:example.com",
         )
 
-        # Give Sydent some time to call /onBind and delete the token.
-        self.sydent.reactor.advance(1000)
+        await asyncio.sleep(0.1)
 
-        cur = self.sydent.db.cursor()
+    cur = sydent.db.cursor()
 
-        # Manually retrieve the tokens for this 3PID. We don't use getTokens because it
-        # filters out sent tokens, so would return nothing even if the token hasn't been
-        # deleted.
-        res = cur.execute(
-            "SELECT medium, address, room_id, sender, token FROM invite_tokens"
-            " WHERE medium = ? AND address = ?",
-            (
-                medium,
-                address,
-            ),
-        )
-        rows = res.fetchall()
+    res = cur.execute(
+        "SELECT medium, address, room_id, sender, token FROM invite_tokens"
+        " WHERE medium = ? AND address = ?",
+        (medium, address),
+    )
+    rows = res.fetchall()
 
-        # Check that we didn't get any result.
-        self.assertEqual(len(rows), 1, rows)
+    # Token should still exist since delete_tokens_on_bind is false.
+    assert len(rows) == 1
