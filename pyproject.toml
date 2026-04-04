@@ -13,26 +13,26 @@ classifiers = [
 ]
 
 dependencies = [
-    "attrs>=19.1.0",
+    "attrs>=22.1.0",
     "jinja2>=3.0.0",
     "matrix-common>=1.1.0,<2",
-    "netaddr>=0.7.0",
+    "netaddr>=0.8.0",
     "phonenumbers>=8.12.32",
-    "prometheus-client>=0.4.0",
-    "pynacl>=1.2.1",
-    "pyOpenSSL>=16.0.0",
-    "pyyaml>=3.11",
-    "service-identity>=1.0.0",
+    "prometheus-client>=0.14.0",
+    "pynacl>=1.5.0",
+    "pyOpenSSL>=22.0.0",
+    "pyyaml>=6.0",
+    "service-identity>=21.1.0",
     "signedjson==1.1.1",
     "sortedcontainers>=2.1.0",
-    "twisted>=18.4.0,<25",
+    "twisted>=22.10.0,<25",
     "unpaddedbase64>=1.1.0",
-    "zope.interface>=4.6.0",
+    "zope.interface>=5.0.0",
 ]
 
 [project.optional-dependencies]
-sentry = ["sentry-sdk>=0.7.2"]
-prometheus = ["prometheus-client>=0.4.0"]
+sentry = ["sentry-sdk>=1.0.0"]
+prometheus = ["prometheus-client>=0.14.0"]
 
 [project.scripts]
 sydent = "sydent.sydent:main"
@@ -48,10 +48,7 @@ dev = [
     "mypy-zope>=0.3.1",
     "parameterized==0.8.1",
     "sentry-sdk",
-    "types-Jinja2==2.11.9",
-    "types-mock==4.0.8",
-    "types-PyOpenSSL==21.0.3",
-    "types-PyYAML==6.0.3",
+    "types-PyYAML>=6.0.3",
     "towncrier>=21.9.0",
 ]
 

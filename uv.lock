@@ -637,31 +637,28 @@ dev = [
     { name = "ruff" },
     { name = "sentry-sdk" },
     { name = "towncrier" },
-    { name = "types-jinja2" },
-    { name = "types-mock" },
-    { name = "types-pyopenssl" },
     { name = "types-pyyaml" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "attrs", specifier = ">=19.1.0" },
+    { name = "attrs", specifier = ">=22.1.0" },
     { name = "jinja2", specifier = ">=3.0.0" },
     { name = "matrix-common", specifier = ">=1.1.0,<2" },
-    { name = "netaddr", specifier = ">=0.7.0" },
+    { name = "netaddr", specifier = ">=0.8.0" },
     { name = "phonenumbers", specifier = ">=8.12.32" },
-    { name = "prometheus-client", specifier = ">=0.4.0" },
-    { name = "prometheus-client", marker = "extra == 'prometheus'", specifier = ">=0.4.0" },
-    { name = "pynacl", specifier = ">=1.2.1" },
-    { name = "pyopenssl", specifier = ">=16.0.0" },
-    { name = "pyyaml", specifier = ">=3.11" },
-    { name = "sentry-sdk", marker = "extra == 'sentry'", specifier = ">=0.7.2" },
-    { name = "service-identity", specifier = ">=1.0.0" },
+    { name = "prometheus-client", specifier = ">=0.14.0" },
+    { name = "prometheus-client", marker = "extra == 'prometheus'", specifier = ">=0.14.0" },
+    { name = "pynacl", specifier = ">=1.5.0" },
+    { name = "pyopenssl", specifier = ">=22.0.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "sentry-sdk", marker = "extra == 'sentry'", specifier = ">=1.0.0" },
+    { name = "service-identity", specifier = ">=21.1.0" },
     { name = "signedjson", specifier = "==1.1.1" },
     { name = "sortedcontainers", specifier = ">=2.1.0" },
-    { name = "twisted", specifier = ">=18.4.0,<25" },
+    { name = "twisted", specifier = ">=22.10.0,<25" },
     { name = "unpaddedbase64", specifier = ">=1.1.0" },
-    { name = "zope-interface", specifier = ">=4.6.0" },
+    { name = "zope-interface", specifier = ">=5.0.0" },
 ]
 provides-extras = ["sentry", "prometheus"]
 
@@ -674,10 +671,7 @@ dev = [
     { name = "ruff", specifier = ">=0.14.0" },
     { name = "sentry-sdk" },
     { name = "towncrier", specifier = ">=21.9.0" },
-    { name = "types-jinja2", specifier = "==2.11.9" },
-    { name = "types-mock", specifier = "==4.0.8" },
-    { name = "types-pyopenssl", specifier = "==21.0.3" },
-    { name = "types-pyyaml", specifier = "==6.0.3" },
+    { name = "types-pyyaml", specifier = ">=6.0.3" },
 ]
 
 [[package]]
@@ -1119,57 +1113,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/77/1c/e07af0df31229250ab58a943077e4adbd5e227d9f2ac826920416b3e5fa2/twisted-24.11.0.tar.gz", hash = "sha256:695d0556d5ec579dcc464d2856b634880ed1319f45b10d19043f2b57eb0115b5", size = 3526722, upload-time = "2024-12-02T09:53:23.767Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/70/53/a50654eb9c63da0df2b5dca8ec27656a88b7edd798de5ffad55353203874/twisted-24.11.0-py3-none-any.whl", hash = "sha256:fe403076c71f04d5d2d789a755b687c5637ec3bcd3b2b8252d76f2ba65f54261", size = 3188667, upload-time = "2024-12-02T09:53:21.131Z" },
-]
-
-[[package]]
-name = "types-cryptography"
-version = "3.3.23.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/18/05/a57fe8bbed10fe4b739fac6e16c4e80c5199ce2f74ae67fa7d7f6e3750da/types-cryptography-3.3.23.2.tar.gz", hash = "sha256:09cc53f273dd4d8c29fa7ad11fefd9b734126d467960162397bc5e3e604dea75", size = 15461, upload-time = "2022-11-08T18:29:28.012Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/36/92dfe7e5056694e78caefd05b383140c74c7fcbfc63d26ee514c77f2d8a2/types_cryptography-3.3.23.2-py3-none-any.whl", hash = "sha256:b965d548f148f8e87f353ccf2b7bd92719fdf6c845ff7cedf2abb393a0643e4f", size = 30223, upload-time = "2022-11-08T18:29:26.848Z" },
-]
-
-[[package]]
-name = "types-jinja2"
-version = "2.11.9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "types-markupsafe" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/46/c4/b82309bfed8195de7997672deac301bd6f5bd5cbb6a3e392b7fe780d7852/types-Jinja2-2.11.9.tar.gz", hash = "sha256:dbdc74a40aba7aed520b7e4d89e8f0fe4286518494208b35123bcf084d4b8c81", size = 13302, upload-time = "2021-11-26T06:21:17.496Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/b0/e79d84748f1d34304f13191424348a719c3febaa3493835370fe9528e1e6/types_Jinja2-2.11.9-py3-none-any.whl", hash = "sha256:60a1e21e8296979db32f9374d8a239af4cb541ff66447bb915d8ad398f9c63b2", size = 18190, upload-time = "2021-11-26T06:21:16.18Z" },
-]
-
-[[package]]
-name = "types-markupsafe"
-version = "1.1.10"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/39/31/b5f059142d058aec41e913d8e0eff0a967e7bc46f9a2ba2f31bc11cff059/types-MarkupSafe-1.1.10.tar.gz", hash = "sha256:85b3a872683d02aea3a5ac2a8ef590193c344092032f58457287fbf8e06711b1", size = 2986, upload-time = "2021-11-27T03:18:07.558Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/d6/b8effb1c48539260a5eb4196afc55efac4ea1684a4991977555eb266b2ef/types_MarkupSafe-1.1.10-py3-none-any.whl", hash = "sha256:ca2bee0f4faafc45250602567ef38d533e877d2ddca13003b319c551ff5b3cc5", size = 3998, upload-time = "2021-11-27T03:18:06.398Z" },
-]
-
-[[package]]
-name = "types-mock"
-version = "4.0.8"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e8/2a/b17fa83779f3711e602cacac4b3ced151d2ff92319025206aa80d41fcb6e/types-mock-4.0.8.tar.gz", hash = "sha256:a3dc54b2c9154e750f7430c215782c3342fd274f253c5e9121788f5d65d2de0f", size = 3955, upload-time = "2022-01-08T15:19:57.9Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/7c/2dad679c960db02f101e837937fcf1ffc2c36ff3797b6e793cae720bf1d0/types_mock-4.0.8-py3-none-any.whl", hash = "sha256:ae6db7a7887641f5397cfe0c516030cc64df51515501d6a3736a2e9474708004", size = 4020, upload-time = "2022-01-08T15:19:56.877Z" },
-]
-
-[[package]]
-name = "types-pyopenssl"
-version = "21.0.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "types-cryptography" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c7/e2/86516e0124f7552c001e04651df9956edfa7aadd3fbf7b83ba9dfe17cf93/types-pyOpenSSL-21.0.3.tar.gz", hash = "sha256:43ddd1a1864c644acd3eb3a9652868418ec1642c3b73326c0e04e9e9c8463cbb", size = 5242, upload-time = "2022-01-07T11:31:32.199Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/d3/a65454af5f0cd059595fa793c161ef377862460d6a905f3e0c8f73305a37/types_pyOpenSSL-21.0.3-py3-none-any.whl", hash = "sha256:6f16e31f35873d94d0ad521dbca062f7023c2685226216d5464c7cdf92a4ee5f", size = 5546, upload-time = "2022-01-07T11:31:31.164Z" },
 ]
 
 [[package]]
