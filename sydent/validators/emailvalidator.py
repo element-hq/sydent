@@ -114,11 +114,14 @@ class EmailValidator:
         :return: The validation link.
         """
         base = self.sydent.config.http.server_http_url_base
-        link = "%s/_matrix/identity/api/v1/validate/email/submitToken?token=%s&client_secret=%s&sid=%d" % (
-            base,
-            urllib.parse.quote(token),
-            urllib.parse.quote(clientSecret),
-            session_id,
+        link = (
+            "%s/_matrix/identity/api/v1/validate/email/submitToken?token=%s&client_secret=%s&sid=%d"
+            % (
+                base,
+                urllib.parse.quote(token),
+                urllib.parse.quote(clientSecret),
+                session_id,
+            )
         )
         if nextLink:
             # manipulate the nextLink to add the sid, because
