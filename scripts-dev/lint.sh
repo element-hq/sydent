@@ -7,6 +7,6 @@ set -ex
 
 black .
 # --quiet suppresses the update check.
-ruff --quiet .
+ruff --quiet check .
 isort .
 mypy

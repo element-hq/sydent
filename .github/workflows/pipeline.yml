@@ -43,7 +43,7 @@ jobs:
 
       - name: Semantic checks (ruff)
         # --quiet suppresses the update check.
-        run: poetry run ruff --quiet .
+        run: poetry run ruff --quiet check .
 
       - name: Restore/persist mypy's cache
         uses: actions/cache@v5
