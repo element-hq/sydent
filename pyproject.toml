@@ -108,7 +108,7 @@ pyyaml = ">=3.11"
 sentry-sdk = { version = ">=0.7.2", optional = true }
 # twisted warns about about the absence of service-identity
 service-identity = ">=1.0.0"
-signedjson = "==1.1.1"
+signedjson = "==1.1.4"
 sortedcontainers = ">=2.1.0"
 twisted = ">=18.4.0"
 typing-extensions = ">=3.7.4"
@@ -117,18 +117,18 @@ unpaddedbase64 = ">=1.1.0"
 
 [tool.poetry.dev-dependencies]
 black = "==21.6b0"
-ruff = "0.0.189"
+ruff = "0.15.9"
 isort = "==5.8.0"
 matrix-is-tester = {git = "https://github.com/matrix-org/matrix-is-tester", rev = "main"}
 mypy = ">=0.902"
 mypy-zope = ">=0.3.1"
-parameterized = "==0.8.1"
+parameterized = "==0.9.0"
 # sentry-sdk is required for typechecking.
 sentry-sdk = "*"
 types-Jinja2 = "2.11.9"
 types-mock = "4.0.8"
 types-PyOpenSSL = "21.0.3"
-types-PyYAML = "6.0.3"
+types-PyYAML = "6.0.12.12"
 towncrier = "^21.9.0"
 
 [tool.poetry.extras]
