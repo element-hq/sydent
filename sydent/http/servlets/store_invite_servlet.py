@@ -133,7 +133,7 @@ class StoreInviteServlet(SydentResource):
         substitutions["token"] = token
 
         for keyword in self.sydent.config.email.third_party_invite_keyword_blocklist:
-            for (key, value) in args.items():
+            for key, value in args.items():
                 # make sure the blocklist doesn't stomp on web_client_location url
                 if key == "org.matrix.web_client_location":
                     value = re.sub(r"^https?://", "", value)
@@ -179,9 +179,9 @@ class StoreInviteServlet(SydentResource):
 
             substitutions["bracketed_room_name"] = "(%s) " % substitutions["room_name"]
 
-        substitutions[
-            "web_client_location"
-        ] = self.sydent.config.email.default_web_client_location
+        substitutions["web_client_location"] = (
+            self.sydent.config.email.default_web_client_location
+        )
         if "org.matrix.web_client_location" in substitutions:
             substitutions["web_client_location"] = substitutions[
                 "org.matrix.web_client_location"
