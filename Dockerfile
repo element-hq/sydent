@@ -8,7 +8,11 @@
 # file is created the first time Sydent runs.
 
 # Step 1: install dependencies
-FROM docker.io/python:3.8-slim-bookworm as builder
+FROM docker.io/python:3.11-slim-bookworm as builder
+
+# Install build tools needed for compiling native extensions (cffi, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Add user sydent
 RUN addgroup --system --gid 993 sydent \
@@ -16,7 +20,7 @@ RUN addgroup --system --gid 993 sydent \
 USER sydent:sydent
 
 # Install poetry
-RUN pip install --user poetry==1.2.2
+RUN pip install --user poetry==2.2.1 poetry-plugin-export
 
 # Copy source code and resources
 WORKDIR /home/sydent/src
@@ -26,7 +30,7 @@ COPY --chown=sydent:sydent ["sydent", "sydent"]
 COPY --chown=sydent:sydent ["README.rst", "pyproject.toml", "poetry.lock", "./"]
 
 # Install dependencies
-RUN python -m poetry install -vv --no-dev --no-interaction --extras "prometheus sentry"
+RUN python -m poetry install -vv --without dev --no-interaction --extras "prometheus sentry"
 
 # Record dependencies for posterity
 RUN python -m poetry export -o requirements.txt
@@ -38,7 +42,7 @@ RUN ln -s $(python -m poetry env info -p) /home/sydent/venv
 RUN find /home/sydent/venv -type f -name '*.pyc' -delete
 
 # Step 2: Create runtime image
-FROM docker.io/python:3.8-slim-bookworm
+FROM docker.io/python:3.11-slim-bookworm
 
 # Add user sydent and create /data directory
 RUN addgroup --system --gid 993 sydent \

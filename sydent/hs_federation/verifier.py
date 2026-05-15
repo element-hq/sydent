@@ -203,7 +203,7 @@ class Verifier:
         signatures: Dict[str, Dict[str, str]] = {}
         for auth in auth_headers:
             if auth.startswith("X-Matrix"):
-                (origin, key, sig) = parse_auth_header(auth)
+                origin, key, sig = parse_auth_header(auth)
                 signatures.setdefault(origin, {})[key] = sig
 
         if origin is None:
