@@ -15,11 +15,12 @@ jobs:
     if: ${{ (github.base_ref == 'main' || contains(github.base_ref, 'release-')) && github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           ref: ${{github.event.pull_request.head.sha}}
-      - uses: actions/setup-python@v6
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.11"
       - run: python -m pip install towncrier
@@ -28,9 +29,11 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
-      - uses: matrix-org/setup-python-poetry@v2
+      - uses: matrix-org/setup-python-poetry@5bbf6603c5c930615ec8a29f1b5d7d258d905aa4 # v2
         with:
           python-version: 3.11
           install-project: false
@@ -46,7 +49,7 @@ jobs:
         run: poetry run ruff --quiet .
 
       - name: Restore/persist mypy's cache
-        uses: actions/cache@v5.0.5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: |
             .mypy_cache
@@ -60,12 +63,14 @@ jobs:
     # Sanity check that we can build the x64 image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
       - name: Build image
-        uses: docker/build-push-action@v7.1.0
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -83,8 +88,10 @@ jobs:
         test-dir: ['tests', 'matrix_is_tester']
 
     steps:
-      - uses: actions/checkout@v6
-      - uses: matrix-org/setup-python-poetry@v2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: matrix-org/setup-python-poetry@5bbf6603c5c930615ec8a29f1b5d7d258d905aa4 # v2
         with:
          python-version: ${{ matrix.python-version }}
       - run: poetry run trial ${{ matrix.test-dir }}
@@ -99,7 +106,7 @@ jobs:
       - run-tests
     runs-on: ubuntu-latest
     steps:
-      - uses: matrix-org/done-action@v3
+      - uses: matrix-org/done-action@3409aa904e8a2aaf2220f09bc954d3d0b0a2ee67 # v3
         with:
           needs: ${{ toJSON(needs) }}
           # The newsfile lint may be skipped on non PR builds or on dependabot builds
