@@ -9,11 +9,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Limit the permissions of the GITHUB_TOKEN.
+permissions: {}
+
 jobs:
   check-newsfile:
     name: Check PR has a changelog
     if: ${{ (github.base_ref == 'main' || contains(github.base_ref, 'release-')) && github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
+    permissions:
+      # Required to check out the repo.
+      contents: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -28,6 +34,9 @@ jobs:
 
   checks:
     runs-on: ubuntu-latest
+    permissions:
+      # Required to check out the repo.
+      contents: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -62,6 +71,9 @@ jobs:
   docker:
     # Sanity check that we can build the x64 image
     runs-on: ubuntu-latest
+    permissions:
+      # Required to check out the repo.
+      contents: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -82,6 +94,9 @@ jobs:
     if: ${{ !cancelled() && !failure() }} # Allow previous steps to be skipped, but not fail
     needs: [check-newsfile, checks]
     runs-on: ubuntu-latest
+    permissions:
+      # Required to check out the repo.
+      contents: read
     strategy:
       matrix:
         python-version: ['3.9', '3.11']

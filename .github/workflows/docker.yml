@@ -8,6 +8,10 @@ on:
 env:
   PLATFORMS: "linux/amd64,linux/arm64"
 
+permissions:
+  # Required to check out the repo
+  contents: read
+
 jobs:
   build:
     name: Build and publish images
