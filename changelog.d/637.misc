@@ -1,0 +1,1 @@
+Replace old `--no-dev` poetry argument with `--without dev` in documentation and Dockerfile.
