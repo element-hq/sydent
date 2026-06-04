@@ -37,7 +37,7 @@ First install `poetry`. See `poetry's documentation <https://python-poetry.org/d
 
     git clone https://github.com/element-hq/sydent.git
     cd sydent
-    poetry install --no-dev
+    poetry install --without dev
     # For development, pull in extra tools with
     # poetry install
 
