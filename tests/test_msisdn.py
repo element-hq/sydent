@@ -6,10 +6,9 @@
 #
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
-import asyncio
 import os.path
 from typing import Optional
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import attr
 from twisted.trial import unittest
@@ -54,13 +53,11 @@ class TestRequestCode(unittest.TestCase):
         self.sydent = make_sydent(test_config=config)
 
     def _make_request(self, url: str, body: Optional[JsonDict] = None) -> Mock:
-        # Patch out the email sending so we can investigate the resulting email.
-        with patch("sydent.sms.openmarket.OpenMarketSMS.sendTextSMS") as sendTextSMS:
-            # We can't use AsyncMock until Python 3.8. Instead, mock the
-            # function as returning a future.
-            f = asyncio.Future()
-            f.set_result(Mock())
-            sendTextSMS.return_value = f
+        # Patch out the SMS sending so we can investigate the resulting call.
+        with patch(
+            "sydent.sms.openmarket.OpenMarketSMS.sendTextSMS",
+            new_callable=AsyncMock,
+        ) as sendTextSMS:
 
             request, channel = make_request(
                 self.sydent.reactor,

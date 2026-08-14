@@ -9,11 +9,10 @@
 import enum
 import logging
 import time
-from typing import Callable, Dict, Generic, Tuple, TypeVar, Union
+from typing import Callable, Dict, Generic, Literal, Tuple, TypeVar, Union
 
 import attr
 from sortedcontainers import SortedList
-from typing_extensions import Literal
 
 logger = logging.getLogger(__name__)
 
