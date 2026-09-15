@@ -44,7 +44,8 @@ jobs:
 
       - uses: matrix-org/setup-python-poetry@5bbf6603c5c930615ec8a29f1b5d7d258d905aa4 # v2
         with:
-          python-version: 3.11
+          python-version: "3.11"
+          poetry-version: "2.2.1"
           install-project: false
 
       - name: Import order (isort)
@@ -99,7 +100,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        python-version: ['3.9', '3.11']
+        python-version: ['3.10', '3.11']
         test-dir: ['tests', 'matrix_is_tester']
 
     steps:
@@ -108,7 +109,8 @@ jobs:
           persist-credentials: false
       - uses: matrix-org/setup-python-poetry@5bbf6603c5c930615ec8a29f1b5d7d258d905aa4 # v2
         with:
-         python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
+          poetry-version: "2.2.1"
       - run: poetry run trial ${{ matrix.test-dir }}
 
   # a job which runs once all the other jobs are complete, thus allowing PRs to

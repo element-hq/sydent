@@ -158,7 +158,6 @@ Res = TypeVar("Res", bound=Resource)
 def jsonwrap(f: Callable[[Res, Request], JsonDict]) -> Callable[[Res, Request], bytes]:
     @functools.wraps(f)
     def inner(self: Res, request: Request) -> bytes:
-
         """
         Runs a web handler function with the given request and parameters, then
         converts its result into JSON and returns it. If an error happens, also sets
