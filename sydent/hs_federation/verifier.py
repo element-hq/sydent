@@ -214,8 +214,8 @@ class Verifier:
             )
 
         json_request = SignedMatrixRequest(
-            method=request.method,
-            uri=request.uri,
+            method=request.method.decode("ascii"),
+            uri=request.uri.decode("ascii"),
             destination_is=self.sydent.config.general.server_name,
             signatures=signatures,
             origin=origin,

@@ -1,0 +1,1 @@
+Decode Twisted `method`/`uri` to `str` before signedjson verification, avoiding HTTP 500 on homeserver-signed 3PID unbind. Contributed by @Zoulama @ ERCOM.
