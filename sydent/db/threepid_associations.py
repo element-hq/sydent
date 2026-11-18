@@ -243,7 +243,7 @@ class GlobalAssociationStore:
             (medium, normalised_address, time_msec(), time_msec()),
         )
 
-        row: tuple[str | None] = res.fetchone()
+        row: tuple[str | None] | None = res.fetchone()
 
         if not row:
             return None

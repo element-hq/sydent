@@ -40,7 +40,7 @@ class HashingMetadataStore:
         # But I think the application code is such that either
         #  - hashing_metadata contains no rows
         #  - or it contains exactly one row with a nonnull lookup_pepper.
-        row: tuple[str] | None = res.fetchone()
+        row: tuple[str | bytes] | None = res.fetchone()
 
         if not row:
             return None
