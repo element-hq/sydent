@@ -70,9 +70,9 @@ class BlindlySignStuffServlet(SydentResource):
             signed: JsonDict = signedjson.sign.sign_json(
                 to_sign, self.server_name, private_key
             )
-        except Exception:
+        except Exception as e:
             logger.exception("signing failed")
-            raise MatrixRestError(500, "M_UNKNOWN", "Internal Server Error")
+            raise MatrixRestError(500, "M_UNKNOWN", "Internal Server Error") from e
 
         return signed
 

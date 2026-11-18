@@ -90,8 +90,8 @@ def parse_server_name(server_name: str) -> tuple[str, str | None]:
                 raise ValueError("Invalid port")
 
         return host, port
-    except Exception:
-        raise ValueError("Invalid server name '%s'" % server_name)
+    except Exception as e:
+        raise ValueError("Invalid server name '%s'" % server_name) from e
 
 
 def is_valid_matrix_server_name(string: str) -> bool:

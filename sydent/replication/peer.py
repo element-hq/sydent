@@ -182,7 +182,7 @@ class RemotePeer(Peer[IResponse]):
             except Exception as e:
                 raise ConfigError(
                     "Unable to decode public key for peer %s: %s" % (server_name, e),
-                )
+                ) from e
 
         self.verify_key = signedjson.key.decode_verify_key_bytes(
             SIGNING_KEY_ALGORITHM + ":", pubkey_decoded

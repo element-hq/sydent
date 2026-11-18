@@ -79,11 +79,11 @@ class ReplicationPushServlet(SydentResource):
         try:
             # json.loads doesn't allow bytes in Python 3.5
             inJson = json_decoder.decode(request.content.read().decode("UTF-8"))
-        except ValueError:
+        except ValueError as e:
             logger.warning(
                 "Peer %s made push connection with malformed JSON", peer.servername
             )
-            raise MatrixRestError(400, "M_BAD_JSON", "Malformed JSON")
+            raise MatrixRestError(400, "M_BAD_JSON", "Malformed JSON") from e
 
         if "sgAssocs" not in inJson:
             logger.warning(

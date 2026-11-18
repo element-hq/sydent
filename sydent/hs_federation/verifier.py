@@ -261,5 +261,5 @@ def parse_auth_header(header_str: str) -> tuple[str, str, str]:
         key = strip_quotes(param_dict["key"])
         sig = strip_quotes(param_dict["sig"])
         return origin, key, sig
-    except Exception:
-        raise SignatureVerifyException("Malformed Authorization header")
+    except Exception as e:
+        raise SignatureVerifyException("Malformed Authorization header") from e
