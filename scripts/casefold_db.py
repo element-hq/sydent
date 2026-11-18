@@ -109,13 +109,15 @@ def sendEmailWithBackoff(
                 {"mxid": mxid},
                 log_send_errors=False,
             )
-            logger.info("Sent email to %s" % address)
+            logger.info("Sent email to %s", address)
 
             return
         except EmailSendException:
             logger.info(
-                "Failed to send email to %s (attempt %d/%d)"
-                % (address, i + 1, MAX_ATTEMPTS_FOR_EMAIL)
+                "Failed to send email to %s (attempt %d/%d)",
+                address,
+                i + 1,
+                MAX_ATTEMPTS_FOR_EMAIL,
             )
 
             time.sleep(backoff)
@@ -198,7 +200,7 @@ def update_local_associations(
                     )
                 )
 
-    logger.info(f"{len(deltas)} rows to update in local_threepid_associations")
+    logger.info("%d rows to update in local_threepid_associations", len(deltas))
 
     # Apply the deltas
     for casefolded_address, delta in deltas.items():
@@ -354,7 +356,9 @@ def update_global_associations(
                 to_delete.append((address,))
 
     logger.info(
-        f"{len(to_delete)} rows to delete, {len(db_update_args)} rows to update in global_threepid_associations"
+        "%d rows to delete, %d rows to update in global_threepid_associations",
+        len(to_delete),
+        len(db_update_args),
     )
     if not dry_run:
         cur = db.cursor()
@@ -366,7 +370,7 @@ def update_global_associations(
             )
 
             logger.info(
-                f"{len(to_delete)} rows deleted from global_threepid_associations"
+                "%d rows deleted from global_threepid_associations", len(to_delete)
             )
 
         if len(db_update_args) > 0:
@@ -376,7 +380,8 @@ def update_global_associations(
             )
 
             logger.info(
-                f"{len(db_update_args)} rows updated in global_threepid_associations"
+                "%d rows updated in global_threepid_associations",
+                len(db_update_args),
             )
 
         db.commit()
@@ -407,7 +412,7 @@ if __name__ == "__main__":
 
     # if the path the user gives us doesn't work, find it for them
     if not os.path.exists(args.config_path):
-        logger.error(f"The config file '{args.config_path}' does not exist.")
+        logger.error("The config file '%s' does not exist.", args.config_path)
         sys.exit(1)
 
     sydent_config = SydentConfig()

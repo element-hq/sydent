@@ -93,13 +93,7 @@ def sendEmail(
     mailPassword = sydent.config.email.smtp_password
     mailTLSMode = sydent.config.email.tls_mode
 
-    logger.info(
-        "Sending mail to %s with mail server: %s"
-        % (
-            mailTo,
-            mailServer,
-        )
-    )
+    logger.info("Sending mail to %s with mail server: %s", mailTo, mailServer)
     try:
         smtp: smtplib.SMTP
         # Explicitly create a context, to ensure we verify the server's certificate

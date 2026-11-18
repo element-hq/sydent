@@ -84,8 +84,9 @@ class _IPBlacklistingResolver:
                     ip_address, self._ip_whitelist, self._ip_blacklist
                 ):
                     logger.info(
-                        "Dropped %s from DNS resolution to %s due to blacklist"
-                        % (ip_address, hostname)
+                        "Dropped %s from DNS resolution to %s due to blacklist",
+                        ip_address,
+                        hostname,
                     )
                     has_bad_ip = True
 

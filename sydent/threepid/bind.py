@@ -170,7 +170,7 @@ class ThreepidBinder:
                 assoc, attempt, "Non-OK error code received (%d)" % response.code
             )
         else:
-            logger.info("Successfully notified on bind for %s" % (mxid,))
+            logger.info("Successfully notified on bind for %s", mxid)
 
             # Skip the deletion step if instructed so by the config.
             if not self.sydent.config.general.delete_tokens_on_bind:
