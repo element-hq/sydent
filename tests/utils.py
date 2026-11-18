@@ -304,6 +304,8 @@ class ResolvingMemoryReactorClock(MemoryReactorClock):
     """
 
     def __init__(self):
+        super().__init__()
+
         lookups = self.lookups = {}  # type: Dict[str, str]
 
         @implementer(IResolverSimple)
@@ -313,8 +315,9 @@ class ResolvingMemoryReactorClock(MemoryReactorClock):
                     return fail(DNSLookupError("OH NO: unknown %s" % (name,)))
                 return succeed(lookups[name])
 
+        # MemoryReactor.__init__ installs a resolver that maps every name to
+        # 127.0.0.1, so this must run after it.
         self.nameResolver = SimpleResolverComplexifier(FakeResolver())
-        super().__init__()
 
     def installNameResolver(self, resolver: IHostnameResolver) -> IHostnameResolver:
         raise NotImplementedError()
