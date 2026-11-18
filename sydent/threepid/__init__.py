@@ -6,12 +6,12 @@
 #
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
-from typing import Any, Dict, Optional
+from typing import Any
 
 import attr
 
 
-def threePidAssocFromDict(d: Dict[str, Any]) -> "ThreepidAssociation":
+def threePidAssocFromDict(d: dict[str, Any]) -> "ThreepidAssociation":
     """Instantiates a ThreepidAssociation from the given dict."""
     assoc = ThreepidAssociation(
         d["medium"],
@@ -39,11 +39,11 @@ class ThreepidAssociation:
 
     medium: str
     address: str
-    lookup_hash: Optional[str]
+    lookup_hash: str | None
     # Note: the next four fields were made optional in schema version 2.
     # See sydent.db.sqlitedb.SqliteDatabase._upgradeSchema
-    mxid: Optional[str]
-    ts: Optional[int]
-    not_before: Optional[int]
-    not_after: Optional[int]
-    extra_fields: Dict[str, Any] = {}
+    mxid: str | None
+    ts: int | None
+    not_before: int | None
+    not_after: int | None
+    extra_fields: dict[str, Any] = {}

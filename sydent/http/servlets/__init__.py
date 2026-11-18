@@ -11,7 +11,7 @@ import copy
 import functools
 import json
 import logging
-from typing import Any, Awaitable, Callable, Dict, Iterable, TypeVar
+from typing import Any, Awaitable, Callable, Iterable, TypeVar
 
 from prometheus_client import Counter
 from twisted.internet import defer
@@ -59,7 +59,7 @@ class MatrixRestError(Exception):
 
 def get_args(
     request: Request, args: Iterable[str], required: bool = True
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Helper function to get arguments for an HTTP request.
     Currently takes args from the top level keys of a json object or

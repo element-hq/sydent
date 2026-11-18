@@ -84,7 +84,8 @@ class MatrixFederationAgent:
         # `seconds` attribute below, so mark this as IReactorTime for now.
         reactor: IReactorTime,
         tls_client_options_factory: Optional[ClientTLSOptionsFactory],
-        _well_known_tls_policy: Optional[IPolicyForHTTPS] = None,
+        # zope.interface releases before 6.2 cannot combine an interface with |.
+        _well_known_tls_policy: "IPolicyForHTTPS | None" = None,
         _srv_resolver: Optional[SrvResolver] = None,
         _well_known_cache: TTLCache[bytes, Optional[bytes]] = well_known_cache,
     ) -> None:

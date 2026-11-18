@@ -8,7 +8,7 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import logging
-from typing import TYPE_CHECKING, Dict, List, Mapping, Optional, Set, TypedDict, Union
+from typing import TYPE_CHECKING, Dict, List, Mapping, Optional, Set, TypedDict
 
 import yaml
 
@@ -33,7 +33,7 @@ class LocalisedPolicy(TypedDict):
     url: str
 
 
-VersionOrLang = Union[str, LocalisedPolicy]
+VersionOrLang = str | LocalisedPolicy
 
 
 class Terms:
