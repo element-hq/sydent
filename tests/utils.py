@@ -6,7 +6,6 @@ from typing import Dict, Optional
 from unittest.mock import MagicMock
 
 import attr
-import twisted.logger
 from OpenSSL import crypto
 from twisted.internet import address
 from twisted.internet._resolver import SimpleResolverComplexifier
@@ -263,35 +262,14 @@ def make_request(
     return req, channel
 
 
-class ToTwistedHandler(logging.Handler):
-    """logging handler which sends the logs to the twisted log"""
-
-    tx_log = twisted.logger.Logger()
-
-    def emit(self, record):
-        log_entry = self.format(record)
-        log_level = record.levelname.lower().replace("warning", "warn")
-        self.tx_log.emit(
-            twisted.logger.LogLevel.levelWithName(log_level), "{entry}", entry=log_entry
-        )
-
-
 def setup_logging():
-    """Configure the python logging appropriately for the tests.
+    """Set the level of the root logger for the tests.
 
-    (Logs will end up in _trial_temp.)
+    pytest captures the log records and shows them in the report of a failing
+    test.
     """
-    root_logger = logging.getLogger()
-
-    log_format = "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s"
-
-    handler = ToTwistedHandler()
-    formatter = logging.Formatter(log_format)
-    handler.setFormatter(formatter)
-    root_logger.addHandler(handler)
-
     log_level = os.environ.get("SYDENT_TEST_LOG_LEVEL", "ERROR")
-    root_logger.setLevel(log_level)
+    logging.getLogger().setLevel(log_level)
 
 
 setup_logging()
