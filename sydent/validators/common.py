@@ -47,7 +47,7 @@ def validateSessionWithToken(
     session, token_info = result
 
     if not clientSecret == session.client_secret:
-        logger.info("Incorrect client secret", sid)
+        logger.info("Incorrect client secret for session %s", sid)
         raise IncorrectClientSecretException()
 
     if session.mtime + THREEPID_SESSION_VALIDATION_TIMEOUT_MS < time_msec():
