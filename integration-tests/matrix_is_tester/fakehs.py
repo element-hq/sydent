@@ -21,7 +21,7 @@ import os
 import random
 import ssl
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from multiprocessing import Process
+from multiprocessing import Event, Process
 from urllib.parse import parse_qs, urlparse
 
 shared_fake_hs = None
@@ -101,13 +101,16 @@ class _FakeHomeserverRequestHandler(BaseHTTPRequestHandler):
         return
 
 
-def _run_http_server():
+def _run_http_server(ready):
     cert_file = os.path.join(os.path.dirname(__file__), "fakehs.pem")
 
+    # HTTPServer listens from construction, so connections made after `ready`
+    # is set wait in the backlog until serve_forever() accepts them.
     httpd = HTTPServer(("127.0.0.1", 4490), _FakeHomeserverRequestHandler)
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.load_cert_chain(cert_file)
     httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
+    ready.set()
     httpd.serve_forever()
 
 
@@ -118,8 +121,12 @@ class FakeHomeserver:
     """
 
     def launch(self):
-        self.process = Process(target=_run_http_server)
+        ready = Event()
+        self.process = Process(target=_run_http_server, args=(ready,))
         self.process.start()
+        if not ready.wait(timeout=30):
+            self.process.terminate()
+            raise RuntimeError("The fake homeserver did not start listening")
 
     def get_addr(self):
         """

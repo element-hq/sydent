@@ -9,6 +9,7 @@
 
 import os
 import shutil
+import socket
 import sys
 import tempfile
 import time
@@ -69,7 +70,9 @@ class MatrixIsTestLauncher:
                 )
             )
 
-        stderr_fp = open(os.path.join(testsubject_path, "sydent.stderr"), "w")
+        # One file per instance, because the suite runs two Sydents at once.
+        self.stderr_path = os.path.join(testsubject_path, "sydent-%d.stderr" % port)
+        stderr_fp = open(self.stderr_path, "w")
 
         # Sydent is installed in the same environment as this package.
         self.process = Popen(
@@ -77,10 +80,25 @@ class MatrixIsTestLauncher:
             cwd=self.tmpdir,
             stderr=stderr_fp,
         )
-        # XXX: wait for startup in a sensible way
-        time.sleep(2)
+        self._wait_until_listening(port)
 
         self._baseUrl = "http://localhost:%d" % (port,)
+
+    def _wait_until_listening(self, port):
+        deadline = time.monotonic() + 30
+        while True:
+            if self.process.poll() is not None:
+                raise RuntimeError(
+                    "Sydent exited with code %d, see %s"
+                    % (self.process.returncode, self.stderr_path)
+                )
+            try:
+                with socket.create_connection(("localhost", port), timeout=1):
+                    return
+            except OSError:
+                if time.monotonic() > deadline:
+                    raise
+                time.sleep(0.1)
 
     def tearDown(self):
         print("Stopping sydent...")
