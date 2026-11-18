@@ -16,7 +16,7 @@ To run the suite from the repository root:
 uv run trial matrix_is_tester
 ```
 
-Sydent's stderr is written to `matrix_is_tester/sydent.stderr`.
+Each Sydent's stderr is written to `matrix_is_tester/sydent-<port>.stderr`.
 
 The code was copied from
 [matrix-org/matrix-is-tester](https://github.com/matrix-org/matrix-is-tester).
