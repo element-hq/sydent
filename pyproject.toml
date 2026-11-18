@@ -41,8 +41,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# sentry-sdk's lower bound is copied from Synapse.
-sentry = ["sentry-sdk>=0.7.2"]
+# 0.13.1 is the oldest release with sentry_sdk.set_tag.
+sentry = ["sentry-sdk>=0.13.1"]
 # prometheus-client is a required dependency. The extra remains so that
 # installs which name it keep working.
 prometheus = ["prometheus-client>=0.4.0"]

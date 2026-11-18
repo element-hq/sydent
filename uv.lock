@@ -860,7 +860,7 @@ requires-dist = [
     { name = "pynacl", specifier = ">=1.2.1" },
     { name = "pyopenssl", specifier = ">=16.0.0" },
     { name = "pyyaml", specifier = ">=3.11" },
-    { name = "sentry-sdk", marker = "extra == 'sentry'", specifier = ">=0.7.2" },
+    { name = "sentry-sdk", marker = "extra == 'sentry'", specifier = ">=0.13.1" },
     { name = "service-identity", specifier = ">=1.0.0" },
     { name = "signedjson", specifier = ">=1.1.1" },
     { name = "sortedcontainers", specifier = ">=2.1.0" },
