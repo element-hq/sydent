@@ -113,6 +113,35 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: uv run pytest ${{ matrix.test-dir }}
 
+  run-tests-oldest:
+    name: Tests with the oldest dependencies
+    if: ${{ !cancelled() && !failure() }} # Allow previous steps to be skipped, but not fail
+    needs: [check-newsfile, checks]
+    runs-on: ubuntu-latest
+    permissions:
+      # Required to check out the repo.
+      contents: read
+    strategy:
+      matrix:
+        test-dir: ['tests', 'integration-tests']
+    env:
+      # The floors in pyproject.toml replace the versions in uv.lock here.
+      UV_LOCKED: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          # The floors are checked on the oldest supported Python.
+          python-version: "3.11"
+      - run: uv run --resolution lowest-direct --extra sentry --extra prometheus pytest ${{ matrix.test-dir }}
+      - name: Lint with the oldest ruff
+        if: ${{ matrix.test-dir == 'tests' }}
+        run: |
+          uv run --resolution lowest-direct --extra sentry --extra prometheus ruff check .
+          uv run --resolution lowest-direct --extra sentry --extra prometheus ruff format --check .
+
   # a job which runs once all the other jobs are complete, thus allowing PRs to
   # be merged.
   tests-done:
@@ -121,6 +150,7 @@ jobs:
       - check-newsfile
       - checks
       - run-tests
+      - run-tests-oldest
     runs-on: ubuntu-latest
     steps:
       - uses: matrix-org/done-action@3409aa904e8a2aaf2220f09bc954d3d0b0a2ee67 # v3

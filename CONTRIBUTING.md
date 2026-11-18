@@ -76,6 +76,18 @@ uv run pytest
 If the summary line at the end reports no failures or errors, then all is
 well and you're ready to work!
 
+CI also runs the unit tests, the black-box tests and ruff with the oldest
+dependency versions that `pyproject.toml` allows, on Python 3.11. To do the
+same, run:
+
+```bash
+uv run --resolution lowest-direct --extra sentry --extra prometheus pytest
+```
+
+and the same command with `pytest integration-tests`, `ruff check .` and
+`ruff format --check .`. This rewrites `uv.lock`, so restore it afterwards.
+When you raise a floor in `pyproject.toml`, write the reason next to it.
+
 ### Run the black-box tests
 
 The `integration-tests/` directory contains `matrix_is_tester`, a black-box test
