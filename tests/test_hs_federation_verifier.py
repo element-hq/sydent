@@ -25,9 +25,8 @@ _CONTENT = {
 
 
 class AuthenticateRequestTestCase(unittest.TestCase):
-    """Twisted IRequest.method/uri are bytes; signedjson requires str."""
-
-    def test_method_and_uri_are_decoded_before_verification(self) -> None:
+    def test_signed_request_with_bytes_method_and_uri_authenticates(self) -> None:
+        """A signed request authenticates when Twisted supplies method and uri as bytes."""
         signing_key = signedjson.key.generate_signing_key("1")
         key_id = "%s:%s" % (signing_key.alg, signing_key.version)
         signed = signedjson.sign.sign_json(
