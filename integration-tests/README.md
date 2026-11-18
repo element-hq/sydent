@@ -17,6 +17,8 @@ uv run pytest integration-tests
 ```
 
 Each Sydent's stderr is written to `matrix_is_tester/sydent-<port>.stderr`.
+The tests log the responses and emails they get at INFO. Add
+`--log-level=INFO` to see those records in the report of a failing test.
 
 The code was copied from
 [matrix-org/matrix-is-tester](https://github.com/matrix-org/matrix-is-tester).
