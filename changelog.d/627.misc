@@ -1,0 +1,1 @@
+Add black-box tests that run Sydent as a separate process against fake homeservers, DNS, SMTP and SMS servers.
