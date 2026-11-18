@@ -53,6 +53,8 @@ dev = [
     "mypy",
     "mypy-zope",
     "parameterized",
+    # 9.0 is the first release that reads the [tool.pytest] table.
+    "pytest>=9.0",
     # sentry-sdk is required for typechecking.
     "sentry-sdk",
     "types-Jinja2",
@@ -142,6 +144,11 @@ module = [
     "sortedcontainers",
 ]
 ignore_missing_imports = true
+
+[tool.pytest]
+# The integration suite binds fixed ports, so a bare `pytest` leaves it out.
+# CI and CONTRIBUTING.md run it on its own with `pytest integration-tests`.
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 88

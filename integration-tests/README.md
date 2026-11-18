@@ -13,7 +13,7 @@ an SMTP sink run in child processes. The suite uses fixed local ports (8098,
 To run the suite from the repository root:
 
 ```sh
-uv run trial matrix_is_tester
+uv run pytest integration-tests
 ```
 
 Each Sydent's stderr is written to `matrix_is_tester/sydent-<port>.stderr`.

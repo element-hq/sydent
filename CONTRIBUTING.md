@@ -52,7 +52,7 @@ $ which python
 
 Be sure to do this _every time_ you open a new terminal window for working on
 Sydent. Using `uv run` or activating the virtualenv ensures that any Python commands 
-you run (`python`, `trial`, etc.) use the versions inside your venv, and not your 
+you run (`python`, `pytest`, etc.) use the versions inside your venv, and not your 
 system Python.
 
 When you're done, you can close your terminal.
@@ -70,19 +70,11 @@ From now on, when you `cd` into the sydent directory, the virtualenv is activate
 To make sure everything is working as expected, run the unit tests:
 
 ```bash
-uv run trial tests
+uv run pytest
 ```
 
-If you see a message like:
-
-```
--------------------------------------------------------------------------------
-Ran 49 tests in 0.485s
-
-PASSED (successes=49)
-```
-
-Then all is well and you're ready to work!
+If the summary line at the end reports no failures or errors, then all is
+well and you're ready to work!
 
 ### Run the black-box tests
 
@@ -94,7 +86,7 @@ It is a uv workspace member, so `uv sync` installs it alongside Sydent.
 To run it, execute:
 
 ```shell
-uv run trial matrix_is_tester
+uv run pytest integration-tests
 ```
 
 Each run starts Sydent on local ports 8098 and 8099, a fake homeserver on port
