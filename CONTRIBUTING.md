@@ -76,6 +76,11 @@ uv run pytest
 If the summary line at the end reports no failures or errors, then all is
 well and you're ready to work!
 
+The tests under `tests/blackbox` start Sydent as a separate process against
+fake homeservers, DNS, SMTP and SMS servers, and take about half a minute. To
+leave them out while iterating, run `uv run pytest --ignore=tests/blackbox`.
+See the docstring of `tests/blackbox/harness.py` for how they work.
+
 ### Run the black-box tests
 
 The `integration-tests/` directory contains `matrix_is_tester`, a black-box test
