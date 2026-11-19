@@ -31,6 +31,9 @@ COPY --chown=sydent:sydent ["res", "res"]
 COPY --chown=sydent:sydent ["scripts", "scripts"]
 COPY --chown=sydent:sydent ["sydent", "sydent"]
 COPY --chown=sydent:sydent ["README.rst", "pyproject.toml", "uv.lock", "LICENSE-AGPL-3.0", "LICENSE-COMMERCIAL", "./"]
+# uv needs every workspace member's metadata to check uv.lock, even though the
+# image does not install the integration tests.
+COPY --chown=sydent:sydent ["integration-tests/pyproject.toml", "integration-tests/"]
 
 # Install dependencies
 RUN uv sync --locked --no-dev --extra prometheus --extra sentry

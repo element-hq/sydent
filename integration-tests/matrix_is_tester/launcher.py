@@ -9,6 +9,8 @@
 
 import os
 import shutil
+import socket
+import sys
 import tempfile
 import time
 from subprocess import Popen
@@ -50,16 +52,8 @@ class MatrixIsTestLauncher:
         self.with_terms = with_terms
 
     def launch(self):
-        sydent_path = os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__),
-                "..",
-            )
-        )
-        testsubject_path = os.path.join(
-            sydent_path,
-            "matrix_is_test",
-        )
+        # The templates and terms live next to this file.
+        testsubject_path = os.path.abspath(os.path.dirname(__file__))
         terms_path = (
             os.path.join(testsubject_path, "terms.yaml") if self.with_terms else ""
         )
@@ -76,27 +70,35 @@ class MatrixIsTestLauncher:
                 )
             )
 
-        newEnv = os.environ.copy()
-        newEnv.update(
-            {
-                "PYTHONPATH": sydent_path,
-            }
-        )
+        # One file per instance, because the suite runs two Sydents at once.
+        self.stderr_path = os.path.join(testsubject_path, "sydent-%d.stderr" % port)
+        stderr_fp = open(self.stderr_path, "w")
 
-        stderr_fp = open(os.path.join(testsubject_path, "sydent.stderr"), "w")
-
-        pybin = os.getenv("SYDENT_PYTHON", "python")
-
+        # Sydent is installed in the same environment as this package.
         self.process = Popen(
-            args=[pybin, "-m", "sydent.sydent"],
+            args=[sys.executable, "-m", "sydent.sydent"],
             cwd=self.tmpdir,
-            env=newEnv,
             stderr=stderr_fp,
         )
-        # XXX: wait for startup in a sensible way
-        time.sleep(2)
+        self._wait_until_listening(port)
 
         self._baseUrl = "http://localhost:%d" % (port,)
+
+    def _wait_until_listening(self, port):
+        deadline = time.monotonic() + 30
+        while True:
+            if self.process.poll() is not None:
+                raise RuntimeError(
+                    "Sydent exited with code %d, see %s"
+                    % (self.process.returncode, self.stderr_path)
+                )
+            try:
+                with socket.create_connection(("localhost", port), timeout=1):
+                    return
+            except OSError:
+                if time.monotonic() > deadline:
+                    raise
+                time.sleep(0.1)
 
     def tearDown(self):
         print("Stopping sydent...")

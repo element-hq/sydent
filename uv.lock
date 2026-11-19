@@ -6,6 +6,25 @@ resolution-markers = [
     "python_full_version < '3.15'",
 ]
 
+[manifest]
+members = [
+    "matrix-is-tester",
+    "matrix-sydent",
+]
+
+[[package]]
+name = "aiosmtpd"
+version = "1.4.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "atpublic" },
+    { name = "attrs" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/ca/b2b7cc880403ef24be77383edaadfcf0098f5d7b9ddbf3e2c17ef0a6af0d/aiosmtpd-1.4.6.tar.gz", hash = "sha256:5a811826e1a5a06c25ebc3e6c4a704613eb9a1bcf6b78428fbe865f4f6c9a4b8", size = 152775, upload-time = "2024-05-18T11:37:50.029Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/39/d401756df60a8344848477d54fdf4ce0f50531f6149f3b8eaae9c06ae3dc/aiosmtpd-1.4.6-py3-none-any.whl", hash = "sha256:72c99179ba5aa9ae0abbda6994668239b64a5ce054471955fe75f581d2592475", size = 154263, upload-time = "2024-05-18T11:37:47.877Z" },
+]
+
 [[package]]
 name = "ast-serialize"
 version = "0.13.1"
@@ -68,6 +87,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/66/83/6607060659998f00afdea0d8375c1e6e2b7d515ab905090d9a5a02f48851/ast_serialize-0.13.1-cp39-abi3-win32.whl", hash = "sha256:4f98da562e5901d69c7dd30885594c5438f859edf354e9ac7517d188fb026c3a", size = 1131889, upload-time = "2026-10-17T00:04:12.953Z" },
     { url = "https://files.pythonhosted.org/packages/9f/6f/bafd6490fe7b355627fabe95f4417e3d02da93102c8552550eb9a0774e1e/ast_serialize-0.13.1-cp39-abi3-win_amd64.whl", hash = "sha256:ddf7cbc9c8abf70102c4a088efe154bb86bfb825b0a10e556d2b15972cf99bd7", size = 1171153, upload-time = "2026-10-17T00:04:14.362Z" },
     { url = "https://files.pythonhosted.org/packages/11/25/4235f4b375a67a37ac595bf478a5407a744eaf7b64113c1c3a5432b8d954/ast_serialize-0.13.1-cp39-abi3-win_arm64.whl", hash = "sha256:48f11d96c9ec71119612f8e79a8c55c12f2b136716d68347433c561d27a25f43", size = 1139035, upload-time = "2026-10-17T00:04:15.767Z" },
+]
+
+[[package]]
+name = "atpublic"
+version = "9.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/08/3f/23b2643edfae61210baee60eec95873a4ad4fc6a7c096a725f240a0bf4db/atpublic-9.0.0.tar.gz", hash = "sha256:61ea62d8445d2aaa83b6dffaa3d90f99fcec10e16683ee9b13792cdcdafa0966", size = 27443, upload-time = "2026-10-13T01:49:05.987Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/34/d1/875c831006b60a9b93d8d5aba734fde33402d9136785d824fa0ba8765731/atpublic-9.0.0-py3-none-any.whl", hash = "sha256:449c3c4f0c74df79749d6fe225ba55e2a2fce34b303f0329211e4d6989ed6f6e", size = 11111, upload-time = "2026-10-13T01:49:05.07Z" },
 ]
 
 [[package]]
@@ -822,11 +850,18 @@ wheels = [
 [[package]]
 name = "matrix-is-tester"
 version = "0.1"
-source = { git = "https://github.com/matrix-org/matrix-is-tester?rev=c87641b9866b5fd6d648d829283c18fbb06d1bbe#c87641b9866b5fd6d648d829283c18fbb06d1bbe" }
+source = { editable = "integration-tests" }
 dependencies = [
+    { name = "aiosmtpd" },
     { name = "requests" },
-    { name = "six" },
     { name = "twisted" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiosmtpd" },
+    { name = "requests", specifier = ">=2.22.0" },
+    { name = "twisted", specifier = ">=19.2.1" },
 ]
 
 [[package]]
@@ -902,7 +937,7 @@ provides-extras = ["sentry", "prometheus"]
 dev = [
     { name = "black" },
     { name = "isort" },
-    { name = "matrix-is-tester", git = "https://github.com/matrix-org/matrix-is-tester?rev=c87641b9866b5fd6d648d829283c18fbb06d1bbe" },
+    { name = "matrix-is-tester", editable = "integration-tests" },
     { name = "mypy" },
     { name = "mypy-zope" },
     { name = "parameterized" },
@@ -1285,15 +1320,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8e/3b/614317881125d7c9d582cf54d81f537cfb52c81c4fc0177a1709f3d475d1/signedjson-1.1.4.tar.gz", hash = "sha256:cd91c56af53f169ef032c62e9c4a3292dc158866933318d0592e3462db3d6492", size = 13565, upload-time = "2022-03-29T16:30:28.208Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6c/a6/fae4333170898827f4d7ff71bec4e79d75fb9d258ecb9a98ee77e38f4df8/signedjson-1.1.4-py3-none-any.whl", hash = "sha256:45569ec54241c65d2403fe3faf7169be5322547706a231e884ca2b427f23d228", size = 10676, upload-time = "2022-03-29T16:30:25.796Z" },
-]
-
-[[package]]
-name = "six"
-version = "1.17.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
 ]
 
 [[package]]

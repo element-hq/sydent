@@ -1,0 +1,27 @@
+[project]
+name = "matrix-is-tester"
+version = "0.1"
+description = "Black-box integration testing for Matrix Identity Servers"
+readme = "README.md"
+# The files copied from matrix-org/matrix-is-tester are under the Apache License
+# in LICENSE. launcher.py, the templates and terms.yaml come from Sydent and are
+# under the licences in the repository root.
+license = "Apache-2.0 AND (AGPL-3.0-only OR LicenseRef-Element-Commercial)"
+license-files = ["LICENSE"]
+
+# Lower bounds copied from matrix-org/matrix-is-tester's setup.py.
+dependencies = [
+    "aiosmtpd",
+    "Twisted>=19.2.1",
+    "requests>=2.22.0",
+]
+
+[tool.uv.build-backend]
+module-name = "matrix_is_tester"
+module-root = ""
+
+[build-system]
+# uv's documentation recommends a range within the current minor release, because
+# a new minor release may change how packages are built.
+requires = ["uv_build>=0.13.9,<0.14"]
+build-backend = "uv_build"
