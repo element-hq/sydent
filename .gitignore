@@ -3,8 +3,6 @@
 .idea/
 .vscode/
 *.iml
-_trial_temp
-_trial_temp.lock
 *.egg
 *.egg-info
 .python-version
