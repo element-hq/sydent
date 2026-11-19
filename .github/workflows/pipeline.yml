@@ -13,9 +13,8 @@ concurrency:
 permissions: {}
 
 env:
-  # The Poetry version that wrote poetry.lock. Keep in step with POETRY_VERSION
-  # in the Dockerfile.
-  POETRY_VERSION: "2.5.1"
+  # Fail instead of updating uv.lock when it is out of date with pyproject.toml.
+  UV_LOCKED: "1"
 
 jobs:
   check-newsfile:
@@ -47,22 +46,20 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: matrix-org/setup-python-poetry@5bbf6603c5c930615ec8a29f1b5d7d258d905aa4 # v2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           # The oldest supported Python, so that mypy flags uses of newer
           # standard library APIs.
           python-version: "3.11"
-          poetry-version: ${{ env.POETRY_VERSION }}
-          install-project: false
 
       - name: Import order (isort)
-        run: poetry run isort --check --diff .
+        run: uv run isort --check --diff .
 
       - name: Code style (black)
-        run: poetry run black --check --diff .
+        run: uv run black --check --diff .
 
       - name: Semantic checks (ruff)
-        run: poetry run ruff check .
+        run: uv run ruff check .
 
       - name: Restore/persist mypy's cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -73,7 +70,7 @@ jobs:
           restore-keys: mypy-cache-
 
       - name: Typechecking (mypy)
-        run: poetry run mypy
+        run: uv run mypy
 
   docker:
     # Sanity check that we can build the x64 image
@@ -119,11 +116,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: matrix-org/setup-python-poetry@5bbf6603c5c930615ec8a29f1b5d7d258d905aa4 # v2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: ${{ matrix.python-version }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-      - run: poetry run trial ${{ matrix.test-dir }}
+      - run: uv run trial ${{ matrix.test-dir }}
 
   # a job which runs once all the other jobs are complete, thus allowing PRs to
   # be merged.

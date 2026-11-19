@@ -7,6 +7,9 @@
 # will contain Sydent's configuration and database. A blank configuration and database
 # file is created the first time Sydent runs.
 
+# Dependabot updates the uv version in this line.
+FROM ghcr.io/astral-sh/uv:0.13.9 AS uv
+
 # Step 1: install dependencies
 FROM docker.io/python:3.15-slim-trixie AS builder
 
@@ -15,28 +18,25 @@ RUN addgroup --system --gid 993 sydent \
     && useradd -m --system --uid 993 -g sydent sydent
 USER sydent:sydent
 
-# Install poetry. Keep POETRY_VERSION in step with .github/workflows/pipeline.yml.
-ARG POETRY_VERSION=2.5.1
-RUN pip install --user "poetry==${POETRY_VERSION}" poetry-plugin-export
+COPY --from=uv /uv /usr/local/bin/uv
+
+# Build the virtualenv with the base image's Python, which the runtime image
+# also provides.
+ENV UV_PYTHON_DOWNLOADS=never
+ENV UV_PROJECT_ENVIRONMENT=/home/sydent/venv
 
 # Copy source code and resources
 WORKDIR /home/sydent/src
 COPY --chown=sydent:sydent ["res", "res"]
 COPY --chown=sydent:sydent ["scripts", "scripts"]
 COPY --chown=sydent:sydent ["sydent", "sydent"]
-COPY --chown=sydent:sydent ["README.rst", "pyproject.toml", "poetry.lock", "./"]
+COPY --chown=sydent:sydent ["README.rst", "pyproject.toml", "uv.lock", "LICENSE-AGPL-3.0", "LICENSE-COMMERCIAL", "./"]
 
 # Install dependencies
-RUN python -m poetry install -vv --without dev --no-interaction --extras "prometheus sentry"
+RUN uv sync --locked --no-dev --extra prometheus --extra sentry
 
 # Record dependencies for posterity
-RUN python -m poetry export -o requirements.txt
-
-# Make the virtualenv accessible for the final image
-RUN ln -s $(python -m poetry env info -p) /home/sydent/venv
-
-# Nuke bytecode files to keep the final image slim.
-RUN find /home/sydent/venv -type f -name '*.pyc' -delete
+RUN uv export --locked --no-dev --extra prometheus --extra sentry -o requirements.txt
 
 # Step 2: Create runtime image
 FROM docker.io/python:3.15-slim-trixie

@@ -1,0 +1,1 @@
+Switch dependency management from Poetry to uv. Development environments are now set up with `uv sync`.

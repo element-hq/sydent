@@ -4,14 +4,14 @@ version = "2.7.0"
 description = "Reference Matrix Identity Verification and Lookup Server"
 readme = "README.rst"
 license = "AGPL-3.0-only OR LicenseRef-Element-Commercial"
-# Without an upper bound, Poetry cannot use unpaddedbase64 2.1.0 (which requires
-# Python <4.0) across the whole range, and locks a second, older version.
-requires-python = ">=3.11,<4"
+license-files = ["LICENSE-*"]
+requires-python = ">=3.11"
 authors = [
     { name = "Matrix.org Team and Contributors", email = "packages@matrix.org" },
 ]
-# Poetry adds the Python version classifiers from requires-python.
-dynamic = ["classifiers"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+]
 
 dependencies = [
     "attrs>=19.1.0",
@@ -66,18 +66,16 @@ dev = [
     "towncrier",
 ]
 
-[tool.poetry]
-packages = [{ include = "sydent" }]
-include = [
-    { path = "matrix-sydent.service" },
-    { path = "res" },
-    { path = "scripts" },
-    { path = "matrix_is_test", format = "sdist" },
-    { path = "scripts-dev", format = "sdist" },
-    { path = "tests", format = "sdist" },
-]
-classifiers = [
-    "Development Status :: 5 - Production/Stable",
+[tool.uv.build-backend]
+module-name = "sydent"
+module-root = ""
+source-include = [
+    "matrix-sydent.service",
+    "res/**",
+    "scripts/**",
+    "matrix_is_test/**",
+    "scripts-dev/**",
+    "tests/**",
 ]
 
 [tool.towncrier]
@@ -167,6 +165,8 @@ select = [
 ]
 
 [build-system]
-# poetry-core reads the [project] table from 2.0.0 onwards.
-requires = ["poetry-core>=2.0.0"]
-build-backend = "poetry.core.masonry.api"
+# uv's documentation recommends a range within the current minor release, because
+# a new minor release may change how packages are built.
+requires = ["uv_build>=0.13.9,<0.14"]
+build-backend = "uv_build"
+
