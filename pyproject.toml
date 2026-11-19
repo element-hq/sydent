@@ -48,9 +48,7 @@ Repository = "https://github.com/element-hq/sydent"
 
 [dependency-groups]
 dev = [
-    "black",
     "ruff",
-    "isort",
     "matrix-is-tester",
     "mypy",
     "mypy-zope",
@@ -118,13 +116,6 @@ source-include = [
         name = "Internal Changes"
         showcontent = true
 
-[tool.isort]
-profile = "black"
-known_first_party = ["matrix_is_tester"]
-
-[tool.black]
-target-version = ['py311']
-
 [tool.mypy]
 plugins = "mypy_zope:plugin"
 show_error_codes = true
@@ -157,9 +148,9 @@ line-length = 88
 
 [tool.ruff.lint]
 ignore = [
+    # The formatter wraps what it can. The remaining long lines are strings and
+    # comments.
     "E501",
-    "F401",
-    "F821",
 ]
 select = [
     # pycodestyle checks.
@@ -167,6 +158,8 @@ select = [
     "W",
     # pyflakes checks.
     "F",
+    # isort checks.
+    "I",
 ]
 
 [build-system]

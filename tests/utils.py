@@ -283,7 +283,7 @@ def setup_logging():
     """
     root_logger = logging.getLogger()
 
-    log_format = "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s" " - %(message)s"
+    log_format = "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s"
 
     handler = ToTwistedHandler()
     formatter = logging.Formatter(log_format)
@@ -306,7 +306,8 @@ class ResolvingMemoryReactorClock(MemoryReactorClock):
     def __init__(self):
         super().__init__()
 
-        lookups = self.lookups = {}  # type: Dict[str, str]
+        lookups: Dict[str, str] = {}
+        self.lookups = lookups
 
         @implementer(IResolverSimple)
         class FakeResolver:
