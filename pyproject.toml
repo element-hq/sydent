@@ -1,3 +1,85 @@
+[project]
+name = "matrix-sydent"
+version = "2.7.0"
+description = "Reference Matrix Identity Verification and Lookup Server"
+readme = "README.rst"
+license = "AGPL-3.0-only OR LicenseRef-Element-Commercial"
+# Without an upper bound, Poetry cannot use unpaddedbase64 2.1.0 (which requires
+# Python <4.0) across the whole range, and locks a second, older version.
+requires-python = ">=3.11,<4"
+authors = [
+    { name = "Matrix.org Team and Contributors", email = "packages@matrix.org" },
+]
+# Poetry adds the Python version classifiers from requires-python.
+dynamic = ["classifiers"]
+
+dependencies = [
+    "attrs>=19.1.0",
+    "jinja2>=3.0.0",
+    "matrix-common>=1.1.0",
+    "netaddr>=0.7.0",
+    "phonenumbers>=8.12.32",
+    # prometheus-client's lower bound is copied from Synapse.
+    "prometheus-client>=0.4.0",
+    "pynacl>=1.2.1",
+    "pyOpenSSL>=16.0.0",
+    "pyyaml>=3.11",
+    # twisted warns about the absence of service-identity
+    "service-identity>=1.0.0",
+    "signedjson>=1.1.1",
+    "sortedcontainers>=2.1.0",
+    "twisted>=18.4.0",
+    "unpaddedbase64>=1.1.0",
+    "zope.interface>=4.6.0",
+]
+
+[project.optional-dependencies]
+# sentry-sdk's lower bound is copied from Synapse.
+sentry = ["sentry-sdk>=0.7.2"]
+# prometheus-client is a required dependency. The extra remains so that
+# installs which name it keep working.
+prometheus = ["prometheus-client>=0.4.0"]
+
+[project.scripts]
+sydent = "sydent.sydent:main"
+
+[project.urls]
+Repository = "https://github.com/element-hq/sydent"
+
+[dependency-groups]
+dev = [
+    "black",
+    "ruff",
+    "isort",
+    # Later revisions add test_versions, which requests /versions rather than
+    # /_matrix/identity/versions and so fails against Sydent.
+    "matrix-is-tester @ git+https://github.com/matrix-org/matrix-is-tester@c87641b9866b5fd6d648d829283c18fbb06d1bbe",
+    "mypy",
+    "mypy-zope",
+    "parameterized",
+    # sentry-sdk is required for typechecking.
+    "sentry-sdk",
+    "types-Jinja2",
+    "types-mock",
+    "types-PyOpenSSL",
+    "types-PyYAML",
+    "towncrier",
+]
+
+[tool.poetry]
+packages = [{ include = "sydent" }]
+include = [
+    { path = "matrix-sydent.service" },
+    { path = "res" },
+    { path = "scripts" },
+    { path = "matrix_is_test", format = "sdist" },
+    { path = "scripts-dev", format = "sdist" },
+    { path = "tests", format = "sdist" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+]
+
 [tool.towncrier]
     package = "sydent"
     filename = "CHANGELOG.md"
@@ -38,7 +120,7 @@
 profile = "black"
 
 [tool.black]
-target-version = ['py36']
+target-version = ['py311']
 
 [tool.mypy]
 plugins = "mypy_zope:plugin"
@@ -67,80 +149,10 @@ module = [
 ]
 ignore_missing_imports = true
 
-[tool.poetry]
-name = "matrix-sydent"
-version = "2.7.0"
-description = "Reference Matrix Identity Verification and Lookup Server"
-authors = ["Matrix.org Team and Contributors <packages@matrix.org>"]
-license = "AGPL-3.0-only OR LicenseRef-Element-Commercial"
-readme = "README.rst"
-repository = "https://github.com/element-hq/sydent"
-packages = [
-    { include = "sydent" },
-]
-
-include = [
-    { path = "matrix-sydent.service" },
-    { path = "res" },
-    { path = "scripts" },
-    { path = "matrix_is_test", format = "sdist" },
-    { path = "scripts-dev", format = "sdist" },
-    { path = "setup.cfg", format = "sdist" },
-    { path = "tests", format = "sdist" },
-]
-classifiers = [
-    "Development Status :: 5 - Production/Stable",
-]
-
-[tool.poetry.dependencies]
-python = "^3.7"
-attrs = ">=19.1.0"
-jinja2 = ">=3.0.0"
-netaddr = ">=0.7.0"
-matrix-common = "^1.1.0"
-phonenumbers = ">=8.12.32"
-# prometheus-client's lower bound is copied from Synapse.
-prometheus-client = ">=0.4.0"
-pynacl = ">=1.2.1"
-pyOpenSSL = ">=16.0.0"
-pyyaml = ">=3.11"
-# sentry-sdk's lower bound is copied from Synapse.
-sentry-sdk = { version = ">=0.7.2", optional = true }
-# twisted warns about about the absence of service-identity
-service-identity = ">=1.0.0"
-signedjson = "==1.1.1"
-sortedcontainers = ">=2.1.0"
-twisted = ">=18.4.0"
-typing-extensions = ">=3.7.4"
-unpaddedbase64 = ">=1.1.0"
-"zope.interface" = ">=4.6.0"
-
-[tool.poetry.dev-dependencies]
-black = "==21.6b0"
-ruff = "0.0.189"
-isort = "==5.8.0"
-matrix-is-tester = {git = "https://github.com/matrix-org/matrix-is-tester", rev = "main"}
-mypy = ">=0.902"
-mypy-zope = ">=0.3.1"
-parameterized = "==0.8.1"
-# sentry-sdk is required for typechecking.
-sentry-sdk = "*"
-types-Jinja2 = "2.11.9"
-types-mock = "4.0.8"
-types-PyOpenSSL = "21.0.3"
-types-PyYAML = "6.0.3"
-towncrier = "^21.9.0"
-
-[tool.poetry.extras]
-sentry = ["sentry-sdk"]
-prometheus = ["prometheus-client"]
-
-[tool.poetry.scripts]
-sydent = "sydent.sydent:main"
-
 [tool.ruff]
 line-length = 88
 
+[tool.ruff.lint]
 ignore = [
     "E501",
     "F401",
@@ -155,5 +167,6 @@ select = [
 ]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+# poetry-core reads the [project] table from 2.0.0 onwards.
+requires = ["poetry-core>=2.0.0"]
 build-backend = "poetry.core.masonry.api"

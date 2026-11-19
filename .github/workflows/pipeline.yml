@@ -12,6 +12,11 @@ concurrency:
 # Limit the permissions of the GITHUB_TOKEN.
 permissions: {}
 
+env:
+  # The Poetry version that wrote poetry.lock. Keep in step with POETRY_VERSION
+  # in the Dockerfile.
+  POETRY_VERSION: "2.5.1"
+
 jobs:
   check-newsfile:
     name: Check PR has a changelog
@@ -44,7 +49,10 @@ jobs:
 
       - uses: matrix-org/setup-python-poetry@5bbf6603c5c930615ec8a29f1b5d7d258d905aa4 # v2
         with:
-          python-version: 3.11
+          # The oldest supported Python, so that mypy flags uses of newer
+          # standard library APIs.
+          python-version: "3.11"
+          poetry-version: ${{ env.POETRY_VERSION }}
           install-project: false
 
       - name: Import order (isort)
@@ -54,8 +62,7 @@ jobs:
         run: poetry run black --check --diff .
 
       - name: Semantic checks (ruff)
-        # --quiet suppresses the update check.
-        run: poetry run ruff --quiet .
+        run: poetry run ruff check .
 
       - name: Restore/persist mypy's cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -99,8 +106,14 @@ jobs:
       contents: read
     strategy:
       matrix:
-        python-version: ['3.9', '3.11']
+        # The oldest supported Python and the newest stable release.
+        python-version: ['3.11', '3.15']
         test-dir: ['tests', 'matrix_is_tester']
+        exclude:
+          # matrix-is-tester imports asyncore and smtpd, which Python 3.12
+          # removed.
+          - python-version: '3.15'
+            test-dir: 'matrix_is_tester'
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -108,7 +121,8 @@ jobs:
           persist-credentials: false
       - uses: matrix-org/setup-python-poetry@5bbf6603c5c930615ec8a29f1b5d7d258d905aa4 # v2
         with:
-         python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
       - run: poetry run trial ${{ matrix.test-dir }}
 
   # a job which runs once all the other jobs are complete, thus allowing PRs to

@@ -53,9 +53,9 @@ class ThreePidValSessionStore:
             "where s.medium = ? and s.address = ? and s.clientSecret = ? and t.validationSession = s.id",
             (medium, address, clientSecret),
         )
-        row: Optional[
-            Tuple[int, str, str, str, Optional[int], int, str, int]
-        ] = cur.fetchone()
+        row: Optional[Tuple[int, str, str, str, Optional[int], int, str, int]] = (
+            cur.fetchone()
+        )
 
         if row:
             session = ValidationSession(
@@ -112,7 +112,7 @@ class ThreePidValSessionStore:
 
         # Let's make up a random sid rather than using sequential ones. This
         # should be safe enough given we reap old sessions.
-        sid = self.random.randint(0, 2 ** 31)
+        sid = self.random.randint(0, 2**31)
 
         cur.execute(
             "insert into threepid_validation_sessions ('id', 'medium', 'address', 'clientSecret', 'mtime')"

@@ -14,8 +14,8 @@ class HTTPChannel: ...
 
 # Type ignore: I don't want to respecify the methods on the interface that we
 # don't use.
-@implementer(IRequest)  # type: ignore[misc]
-class Request:
+@implementer(IRequest)
+class Request:  # type: ignore[misc]
     # Instance attributes mentioned in the docstring
     method: bytes
     uri: bytes

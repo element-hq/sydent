@@ -10,9 +10,7 @@
 # Actions on the hashing_metadata table which is defined in the migration process in
 # sqlitedb.py
 from sqlite3 import Cursor
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
-
-from typing_extensions import Literal
+from typing import TYPE_CHECKING, Callable, List, Literal, Optional, Tuple
 
 if TYPE_CHECKING:
     from sydent.sydent import Sydent

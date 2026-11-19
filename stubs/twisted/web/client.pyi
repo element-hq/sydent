@@ -77,8 +77,8 @@ def readBody(response: IResponse) -> Deferred[bytes]: ...
 
 # Type ignore: I don't want to respecify the methods on the interface that we
 # don't use.
-@implementer(IResponse)  # type: ignore[misc]
-class Response:
+@implementer(IResponse)
+class Response:  # type: ignore[misc]
     code: int
     headers: Headers
     # Length is either `int` or the opaque object UNKNOWN_LENGTH.
