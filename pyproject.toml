@@ -74,7 +74,6 @@ include = [
     { path = "scripts" },
     { path = "matrix_is_test", format = "sdist" },
     { path = "scripts-dev", format = "sdist" },
-    { path = "setup.cfg", format = "sdist" },
     { path = "tests", format = "sdist" },
 ]
 classifiers = [
