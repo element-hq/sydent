@@ -116,7 +116,7 @@ unpaddedbase64 = ">=1.1.0"
 "zope.interface" = ">=4.6.0"
 
 [tool.poetry.dev-dependencies]
-black = "==21.6b0"
+black = "==23.3.0"
 ruff = "0.0.189"
 isort = "==5.8.0"
 matrix-is-tester = {git = "https://github.com/matrix-org/matrix-is-tester", rev = "main"}
