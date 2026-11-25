@@ -8,15 +8,16 @@
 # file is created the first time Sydent runs.
 
 # Step 1: install dependencies
-FROM docker.io/python:3.8-slim-bookworm as builder
+FROM docker.io/python:3.15-slim-trixie AS builder
 
 # Add user sydent
 RUN addgroup --system --gid 993 sydent \
     && useradd -m --system --uid 993 -g sydent sydent
 USER sydent:sydent
 
-# Install poetry
-RUN pip install --user poetry==1.2.2
+# Install poetry. Keep POETRY_VERSION in step with .github/workflows/pipeline.yml.
+ARG POETRY_VERSION=2.5.1
+RUN pip install --user "poetry==${POETRY_VERSION}" poetry-plugin-export
 
 # Copy source code and resources
 WORKDIR /home/sydent/src
@@ -38,7 +39,7 @@ RUN ln -s $(python -m poetry env info -p) /home/sydent/venv
 RUN find /home/sydent/venv -type f -name '*.pyc' -delete
 
 # Step 2: Create runtime image
-FROM docker.io/python:3.8-slim-bookworm
+FROM docker.io/python:3.15-slim-trixie
 
 # Add user sydent and create /data directory
 RUN addgroup --system --gid 993 sydent \

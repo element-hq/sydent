@@ -1,0 +1,1 @@
+Declare `prometheus-client` as a required dependency. Sydent imports it at start-up, so installing without the `prometheus` extra failed.

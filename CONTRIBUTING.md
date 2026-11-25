@@ -6,7 +6,7 @@ this case, the [GNU Affero General Public License v3](LICENSE-AGPL-3.0).
 
 ## Set up your development environment
 
-To contribute to Sydent, ensure you have Python 3.7 and `git` available on your 
+To contribute to Sydent, ensure you have Python 3.11 or later and `git` available on your 
 system. You'll need to clone the source code first:
 
 ```shell
@@ -23,12 +23,12 @@ poetry in an isolated environment capable of self updating. We recommend using
 
 ```shell
 pip install pipx
-pipx install poetry==1.1.12
+pipx install poetry==2.5.1
 poetry --version
 ```
 
-For the time being, we are erring towards caution by using a pinned version of 
-poetry.
+Use the Poetry version that CI uses (`POETRY_VERSION` in
+`.github/workflows/pipeline.yml`), because other versions may rewrite `poetry.lock`.
 
 ### Generate a virtualenv
 
@@ -48,22 +48,20 @@ Otherwise, you'll end up running against the system python environment.
 $ which python
 /usr/bin/python
 $ poetry run which python
-/home/user/.cache/pypoetry/virtualenvs/matrix-sydent-Ew7U0NLX-py3.10/bin/python
+/home/user/.cache/pypoetry/virtualenvs/matrix-sydent-Ew7U0NLX-py3.11/bin/python
 ```
 
-To avoid repeatedly typing out `poetry run`, use `poetry shell`:
+To avoid repeatedly typing out `poetry run`, activate the virtualenv in your shell:
 
 ```shell
-$ poetry shell
-Spawning shell within /home/user/.cache/pypoetry/virtualenvs/matrix-sydent-Ew7U0NLX-py3.10
-. /home/user/.cache/pypoetry/virtualenvs/matrix-sydent-Ew7U0NLX-py3.10/bin/activate
+$ eval $(poetry env activate)
 
 $ which python
-~/.cache/pypoetry/virtualenvs/matrix-sydent-Ew7U0NLX-py3.10/bin/python
+/home/user/.cache/pypoetry/virtualenvs/matrix-sydent-Ew7U0NLX-py3.11/bin/python
 ```
 
 Be sure to do this _every time_ you open a new terminal window for working on
-Sydent. Using `poetry run` or `poetry shell` ensures that any Python commands 
+Sydent. Using `poetry run` or activating the virtualenv ensures that any Python commands 
 you run (`pip`, `python`, etc.) use the versions inside your venv, and not your 
 system Python.
 
@@ -71,14 +69,14 @@ When you're done, you can close your terminal.
 
 ### Optional: `direnv`
 
-If even typing `poetry shell` is too much work for you, take a look at 
+If even activating the virtualenv is too much work for you, take a look at 
 [`direnv`](https://direnv.net/). A few steps are needed:
 
 1. install direnv.
 2. Add the configuration from [here](https://github.com/direnv/direnv/wiki/Python#poetry) to `~/.direnvrc`.
 3. In the Sydent checkout, run `echo layout poetry >> .envrc`. Then run `direnv allow`.
 
-From now on, when you `cd` into the sydent directory, `poetry shell` will run automatically. Whenever you navigate out of the sydent directory, you'll no longer be using poetry's venv.
+From now on, when you `cd` into the sydent directory, poetry's venv is activated automatically. Whenever you navigate out of the sydent directory, you'll no longer be using poetry's venv.
 
 ### Run the unit tests
 
@@ -92,9 +90,9 @@ If you see a message like:
 
 ```
 -------------------------------------------------------------------------------
-Ran 25 tests in 0.324s
+Ran 49 tests in 0.485s
 
-PASSED (successes=25)
+PASSED (successes=49)
 ```
 
 Then all is well and you're ready to work!
@@ -106,6 +104,9 @@ black-box testing of compliance with the [Matrix Identity Service API](https://m
 (Features that are Sydent-specific belong in unit tests rather than the black-box test suite.)
 This project is marked as a development dependency, so Poetry will automatically
 install for you.
+
+`matrix-is-tester` only runs on Python 3.11: it imports `asyncore` and `smtpd`,
+which Python 3.12 removed.
 
 Now, to run `matrix-is-tester`, execute:
 ```
