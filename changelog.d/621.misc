@@ -1,0 +1,1 @@
+Switch dependency management from Poetry to uv. To install from source, run `uv sync --no-dev` and start Sydent with `uv run --no-dev sydent`.
