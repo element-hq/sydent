@@ -105,6 +105,9 @@ black-box testing of compliance with the [Matrix Identity Service API](https://m
 This project is marked as a development dependency, so Poetry will automatically
 install for you.
 
+`matrix-is-tester` only runs on Python 3.11: it imports `asyncore` and `smtpd`,
+which Python 3.12 removed.
+
 Now, to run `matrix-is-tester`, execute:
 ```
 poetry run trial matrix_is_tester
