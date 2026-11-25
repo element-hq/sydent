@@ -1,0 +1,1 @@
+The Docker image is now built with uv. It no longer contains pip, `requirements.txt`, or a copy of Sydent's source under `/home/sydent/src`.

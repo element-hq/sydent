@@ -5,3 +5,4 @@
 sydent.conf
 sydent.db
 .git
+.venv
