@@ -41,9 +41,11 @@ RUN find /home/sydent/venv -type f -name '*.pyc' -delete
 # Step 2: Create runtime image
 FROM docker.io/python:3.15-slim-trixie
 
-# Add user sydent and create /data directory
+# Add user sydent and create /data directory. Debian creates home directories
+# with mode 0700, which would stop a container started with another user ID
+# (`docker run --user`) from reading the virtualenv.
 RUN addgroup --system --gid 993 sydent \
-    && useradd -m --system --uid 993 -g sydent sydent \
+    && useradd -m -K HOME_MODE=0755 --system --uid 993 -g sydent sydent \
     && mkdir /data \
     && chown sydent:sydent /data
 
