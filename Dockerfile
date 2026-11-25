@@ -30,7 +30,7 @@ WORKDIR /home/sydent/src
 COPY --chown=sydent:sydent ["res", "res"]
 COPY --chown=sydent:sydent ["scripts", "scripts"]
 COPY --chown=sydent:sydent ["sydent", "sydent"]
-COPY --chown=sydent:sydent ["README.rst", "pyproject.toml", "uv.lock", "./"]
+COPY --chown=sydent:sydent ["README.rst", "pyproject.toml", "uv.lock", "LICENSE-AGPL-3.0", "LICENSE-COMMERCIAL", "./"]
 
 # Install dependencies
 RUN uv sync --locked --no-dev --extra prometheus --extra sentry
