@@ -126,9 +126,29 @@ source-include = [
 
 [tool.mypy]
 plugins = "mypy_zope:plugin"
-show_error_codes = true
-namespace_packages = true
 strict = true
+# Code that a narrowed type makes unreachable often means a wrong annotation.
+warn_unreachable = true
+enable_error_code = [
+    # Every type: ignore names the error it silences.
+    "ignore-without-code",
+    # Conditions that are always true or always false.
+    "redundant-expr",
+    "truthy-bool",
+    "truthy-iterable",
+    # Names bound on only some paths.
+    "possibly-undefined",
+    # Calls to functions marked @deprecated.
+    "deprecated",
+    # Overrides that make a mutable attribute narrower.
+    "mutable-override",
+    # match statements that do not handle every case.
+    "exhaustive-match",
+    # A Self annotation that mypy would infer anyway.
+    "redundant-self",
+    # reveal_type without an import, which fails at runtime.
+    "unimported-reveal",
+]
 
 files = [
     # Find files that pass with
