@@ -158,6 +158,8 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 88
+# A Python script without a .py suffix.
+extend-include = ["scripts/generate-key"]
 
 [tool.ruff.lint]
 ignore = [
