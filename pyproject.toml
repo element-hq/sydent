@@ -222,6 +222,18 @@ select = [
     "DTZ",
     # flake8-pytest-style: consistent pytest idioms.
     "PT",
+    # flake8-executable: shebangs that do not match the file mode.
+    "EXE",
+    # flake8-debugger: leftover breakpoints.
+    "T10",
+    # flake8-tidy-imports: relative imports from parent packages.
+    "TID",
+    # pygrep-hooks: noqa and type: ignore comments that name no error code.
+    "PGH",
+    # flake8-2020: sys.version comparisons that break on two-digit versions.
+    "YTT",
+    # flake8-slots: subclasses of str, tuple and namedtuple without __slots__.
+    "SLOT",
 ]
 
 [tool.ruff.lint.per-file-ignores]
