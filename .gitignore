@@ -19,4 +19,4 @@ _trial_temp.lock
 /sydent.conf
 /sydent.db
 /sydent.pid
-/matrix_is_test/sydent.stderr
+/integration-tests/matrix_is_tester/sydent-*.stderr
