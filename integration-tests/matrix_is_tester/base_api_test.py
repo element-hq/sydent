@@ -14,6 +14,8 @@
 
 import json
 import logging
+import unittest
+from typing import TYPE_CHECKING
 
 from matrix_is_tester.is_api import IsApi
 from matrix_is_tester.launch_is import get_or_launch_is
@@ -21,12 +23,21 @@ from matrix_is_tester.mailsink import get_shared_mailsink
 
 logger = logging.getLogger(__name__)
 
+# The subclasses also derive from unittest.TestCase, which provides the
+# assertion methods. Deriving from it here would make pytest collect this class.
+if TYPE_CHECKING:
+    _TestCase = unittest.TestCase
+else:
+    _TestCase = object
 
-class BaseApiTest:
+
+class BaseApiTest(_TestCase):
     """
     Not a test case itself, but can be subclassed to test APIs common
     between versions.
     """
+
+    API_VERSION: str
 
     def setUp(self):
         self.baseUrl = get_or_launch_is()

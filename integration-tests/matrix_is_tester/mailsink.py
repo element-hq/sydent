@@ -15,6 +15,7 @@
 import atexit
 import threading
 from multiprocessing import Event, Process, Queue
+from typing import Any
 
 from aiosmtpd.controller import Controller
 
@@ -32,6 +33,7 @@ def get_shared_mailsink():
 
 def destroy_shared():
     global shared_instance
+    assert shared_instance is not None
     shared_instance.tearDown()
 
 
@@ -61,7 +63,7 @@ def run_mail_sink(q, ready):
 
 class MailSink:
     def launch(self):
-        self.queue = Queue()
+        self.queue: Queue[dict[str, Any]] = Queue()
         ready = Event()
         self.process = Process(target=run_mail_sink, args=(self.queue, ready))
         self.process.start()

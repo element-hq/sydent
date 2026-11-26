@@ -56,6 +56,7 @@ def get_shared_fake_hs():
 
 
 def _destroy_shared():
+    assert shared_fake_hs is not None
     shared_fake_hs.tearDown()
 
 

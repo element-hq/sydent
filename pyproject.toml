@@ -154,11 +154,24 @@ enable_error_code = [
     "unimported-reveal",
 ]
 
-files = ["sydent", "scripts", "scripts/generate-key"]
+files = [
+    "sydent",
+    "scripts",
+    "scripts/generate-key",
+    "integration-tests/matrix_is_tester",
+]
 mypy_path = "stubs"
 # scripts/ has no __init__.py. This names scripts/casefold_db.py
 # scripts.casefold_db, the module that the tests import.
 explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+# The integration tests come from matrix-org/matrix-is-tester without
+# annotations. mypy still checks the bodies of their functions.
+module = "matrix_is_tester.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
 # The except clause in update_local_associations only catches an exception
