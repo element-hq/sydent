@@ -52,7 +52,8 @@ def sendEmail(
     mailFrom = sydent.config.email.sender
     myHostname = sydent.config.email.host_name
 
-    midRandom = "".join([random.choice(string.ascii_letters) for _ in range(16)])
+    # A Message-ID only has to be unique.
+    midRandom = "".join([random.choice(string.ascii_letters) for _ in range(16)])  # noqa: S311
     messageid = "<%d%s@%s>" % (time_msec(), midRandom, myHostname)
 
     substitutions.update(

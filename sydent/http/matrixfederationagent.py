@@ -363,9 +363,9 @@ class MatrixFederationAgent:
             logger.info("Error fetching %s: %s", uri_str, e)
 
             # add some randomness to the TTL to avoid a stampeding herd every hour
-            # after startup
+            # after startup. Jitter needs no cryptographic randomness.
             cache_period = WELL_KNOWN_INVALID_CACHE_PERIOD
-            cache_period += random.uniform(0, WELL_KNOWN_DEFAULT_CACHE_PERIOD_JITTER)
+            cache_period += random.uniform(0, WELL_KNOWN_DEFAULT_CACHE_PERIOD_JITTER)  # noqa: S311
             return (None, cache_period)
 
         result = parsed_body["m.server"].encode("ascii")
@@ -378,7 +378,7 @@ class MatrixFederationAgent:
             cache_period = WELL_KNOWN_DEFAULT_CACHE_PERIOD
             # add some randomness to the TTL to avoid a stampeding herd every 24 hours
             # after startup
-            cache_period += random.uniform(0, WELL_KNOWN_DEFAULT_CACHE_PERIOD_JITTER)
+            cache_period += random.uniform(0, WELL_KNOWN_DEFAULT_CACHE_PERIOD_JITTER)  # noqa: S311
         else:
             cache_period = min(cache_period, WELL_KNOWN_MAX_CACHE_PERIOD)
 

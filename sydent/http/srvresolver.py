@@ -60,7 +60,8 @@ def pick_server_from_list(server_list: list[Server]) -> tuple[bytes, int]:
     min_priority = min(s.priority for s in server_list)
     eligible_servers = [s for s in server_list if s.priority == min_priority]
     total_weight = sum(s.weight for s in eligible_servers)
-    target_weight = random.randint(0, total_weight)
+    # RFC 2782's weighted choice needs no cryptographic randomness.
+    target_weight = random.randint(0, total_weight)  # noqa: S311
 
     for s in eligible_servers:
         target_weight -= s.weight

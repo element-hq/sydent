@@ -108,7 +108,9 @@ class HashingMetadataStore:
 
         # Get count of all 3PID records
         # Medium/address combos are marked as UNIQUE in the database
-        sql = "SELECT COUNT(*) FROM %s" % table
+        # `table` is one of the names in its Literal type and the batch bounds are
+        # ints, so the S608 suppressions in this function cover no user input.
+        sql = "SELECT COUNT(*) FROM %s" % table  # noqa: S608
         res = cur.execute(sql)
         row: tuple[int] = res.fetchone()
         row_count = row[0]
@@ -118,7 +120,7 @@ class HashingMetadataStore:
         batch_size = 500
         count = 0
         while count < row_count:
-            sql = "SELECT medium, address FROM %s ORDER BY id LIMIT %s OFFSET %s" % (
+            sql = "SELECT medium, address FROM %s ORDER BY id LIMIT %s OFFSET %s" % (  # noqa: S608
                 table,
                 batch_size,
                 count,
@@ -141,7 +143,7 @@ class HashingMetadataStore:
 
                 # Save the result to the DB
                 sql = (
-                    "UPDATE %s SET lookup_hash = ? "
+                    "UPDATE %s SET lookup_hash = ? "  # noqa: S608
                     "WHERE medium = ? AND address = ?" % table
                 )
                 # Lines up the query to be executed on commit

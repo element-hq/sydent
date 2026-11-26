@@ -131,7 +131,8 @@ class EmailValidateCodeServlet(SydentResource):
         resp = None
         try:
             resp = self.do_validate_request(request)
-        except Exception:
+        except Exception:  # noqa: S110
+            # Any failure shows the failure page.
             pass
         if resp and "success" in resp and resp["success"]:
             msg = "Verification successful! Please return to your Matrix client to continue."

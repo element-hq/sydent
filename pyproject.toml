@@ -172,6 +172,9 @@ ignore = [
     "SIM102",
     # try/except/pass reads as clearly as contextlib.suppress.
     "SIM105",
+    # Sydent asserts invariants that the code already guarantees, so that mypy
+    # can narrow types. Nothing runs Sydent with -O.
+    "S101",
 ]
 select = [
     # pycodestyle checks.
@@ -206,7 +209,19 @@ select = [
     # pylint errors, such as log calls whose arguments do not match their
     # placeholders.
     "PLE",
+    # flake8-bandit: SQL built from strings, weak randomness, subprocess calls
+    # and similar security smells.
+    "S",
+    # flake8-async: blocking calls in coroutines, which stall the event loop.
+    # It does not know sqlite3, which Sydent calls synchronously by design.
+    "ASYNC",
+    # flake8-datetimez: datetimes without a time zone.
+    "DTZ",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests use fixed secrets and non-cryptographic randomness.
+"{tests,integration-tests}/**" = ["S105", "S311"]
 
 [build-system]
 # uv's documentation recommends a range within the current minor release, because

@@ -136,7 +136,7 @@ class HTTPClient(Generic[AgentType]):
             # TODO Will this cause the server to think the request was a failure?
             body = await read_body_with_max_size(response, max_size)
             json_body = json_decoder.decode(body.decode("UTF-8"))
-        except Exception:
+        except Exception:  # noqa: S110
             # We might get an exception here because the body exceeds the max_size, or it
             # isn't valid JSON. In both cases, we don't care about it.
             pass
