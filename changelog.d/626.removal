@@ -1,0 +1,1 @@
+Require sentry-sdk 0.13.1 or later for the `sentry` extra, and PyYAML 5.1, pyOpenSSL 22.1.0, service-identity 21.1.0 and Twisted 21.2.0 or later.

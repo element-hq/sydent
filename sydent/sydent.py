@@ -89,8 +89,7 @@ class Sydent:
                 dsn=self.config.general.sentry_dsn,
                 release=get_distribution_version_string("matrix-sydent"),
             )
-            with sentry_sdk.configure_scope() as scope:
-                scope.set_tag("sydent_server_name", self.config.general.server_name)
+            sentry_sdk.set_tag("sydent_server_name", self.config.general.server_name)
 
             # workaround for https://github.com/getsentry/sentry-python/issues/803: we
             # disable automatic GC and run it periodically instead.
