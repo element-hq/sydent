@@ -796,8 +796,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiosmtpd" },
-    { name = "requests", specifier = ">=2.22.0" },
+    { name = "aiosmtpd", specifier = ">=1.2" },
+    { name = "requests", specifier = ">=2.19.0" },
 ]
 
 [[package]]
@@ -850,37 +850,37 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "attrs", specifier = ">=19.1.0" },
+    { name = "attrs", specifier = ">=19.2.0" },
     { name = "jinja2", specifier = ">=3.0.0" },
     { name = "matrix-common", specifier = ">=1.1.0" },
-    { name = "netaddr", specifier = ">=0.7.0" },
-    { name = "phonenumbers", specifier = ">=8.12.32" },
+    { name = "netaddr", specifier = ">=0.7.10" },
+    { name = "phonenumbers", specifier = ">=8.12.33" },
     { name = "prometheus-client", specifier = ">=0.4.0" },
     { name = "prometheus-client", marker = "extra == 'prometheus'", specifier = ">=0.4.0" },
     { name = "pynacl", specifier = ">=1.2.1" },
-    { name = "pyopenssl", specifier = ">=16.0.0" },
-    { name = "pyyaml", specifier = ">=3.11" },
+    { name = "pyopenssl", specifier = ">=22.1.0" },
+    { name = "pyyaml", specifier = ">=5.1" },
     { name = "sentry-sdk", marker = "extra == 'sentry'", specifier = ">=0.13.1" },
-    { name = "service-identity", specifier = ">=1.0.0" },
+    { name = "service-identity", specifier = ">=21.1.0" },
     { name = "signedjson", specifier = ">=1.1.1" },
     { name = "sortedcontainers", specifier = ">=2.1.0" },
-    { name = "twisted", specifier = ">=18.4.0" },
+    { name = "twisted", specifier = ">=21.2.0" },
     { name = "unpaddedbase64", specifier = ">=1.1.0" },
-    { name = "zope-interface", specifier = ">=4.6.0" },
+    { name = "zope-interface", specifier = ">=4.7.2" },
 ]
 provides-extras = ["sentry", "prometheus"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "matrix-is-tester", editable = "integration-tests" },
-    { name = "mypy" },
-    { name = "mypy-zope" },
-    { name = "parameterized" },
+    { name = "mypy", specifier = ">=1.17.0" },
+    { name = "mypy-zope", specifier = ">=1.0.13" },
+    { name = "parameterized", specifier = ">=0.7.0" },
     { name = "pytest", specifier = ">=9.0" },
-    { name = "ruff" },
+    { name = "ruff", specifier = ">=0.13.0" },
     { name = "sentry-sdk" },
     { name = "sortedcontainers-stubs" },
-    { name = "towncrier" },
+    { name = "towncrier", specifier = ">=23.6.0" },
     { name = "types-jinja2" },
     { name = "types-mock" },
     { name = "types-netaddr" },

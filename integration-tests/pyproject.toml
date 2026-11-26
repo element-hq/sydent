@@ -9,10 +9,12 @@ readme = "README.md"
 license = "Apache-2.0 AND (AGPL-3.0-only OR LicenseRef-Element-Commercial)"
 license-files = ["LICENSE"]
 
-# Lower bounds copied from matrix-org/matrix-is-tester's setup.py.
 dependencies = [
-    "aiosmtpd",
-    "requests>=2.22.0",
+    # Older releases use asyncio.coroutine, which Python 3.11 removed.
+    "aiosmtpd>=1.2",
+    # Older releases cap urllib3 below 1.23, and urllib3 1.22 imports ABCs from
+    # collections, which Python 3.10 removed.
+    "requests>=2.19.0",
 ]
 
 [tool.uv.build-backend]

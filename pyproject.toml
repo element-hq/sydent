@@ -21,30 +21,51 @@ classifiers = [
 ]
 
 dependencies = [
-    "attrs>=19.1.0",
+    # 19.2.0 is the oldest release that Twisted 21.2.0 accepts.
+    "attrs>=19.2.0",
+    # Jinja2 2.x does not import with MarkupSafe 2.1 and later.
     "jinja2>=3.0.0",
+    # 1.1.0 adds matrix_common.versionstring.
     "matrix-common>=1.1.0",
-    "netaddr>=0.7.0",
-    "phonenumbers>=8.12.32",
-    # prometheus-client's lower bound is copied from Synapse.
+    # Older releases do not build on Python 3.
+    "netaddr>=0.7.10",
+    # Sydent 2.7.0's floor was 8.12.32, which is yanked. The tests pass from 8.8.0,
+    # and older releases have regular expressions that Python 3.11 rejects.
+    "phonenumbers>=8.12.33",
+    # Sydent 2.7.0's floor, copied from Synapse. The tests pass from 0.0.6, but
+    # they do not check the metrics.
     "prometheus-client>=0.4.0",
+    # Sydent 2.7.0's floor. The tests pass from 1.2.0, and older releases do not
+    # build on Python 3.11.
     "pynacl>=1.2.1",
-    "pyOpenSSL>=16.0.0",
-    "pyyaml>=3.11",
-    # twisted warns about the absence of service-identity
-    "service-identity>=1.0.0",
+    # Older releases set no upper bound on cryptography, and do not import with
+    # its current releases.
+    "pyOpenSSL>=22.1.0",
+    # Older releases import ABCs from collections, which Python 3.10 removed.
+    "pyyaml>=5.1",
+    # Without a usable service-identity, Twisted warns and falls back to a weaker
+    # check of TLS server names. Twisted needs verify_ip_address, which 18.1.0
+    # adds, and 18.1.0 imports six without depending on it.
+    "service-identity>=21.1.0",
+    # Sydent 2.7.0's pin. The tests pass from 1.1, the first release with
+    # signedjson.types.
     "signedjson>=1.1.1",
+    # Sydent 2.7.0's floor. The tests pass from 2.0.5, and older releases import
+    # ABCs from collections, which Python 3.10 removed.
     "sortedcontainers>=2.1.0",
-    "twisted>=18.4.0",
+    # Older releases have no wheel for Python 3.11 and do not build on it.
+    "twisted>=21.2.0",
+    # 1.1.0 adds the urlsafe argument of encode_base64.
     "unpaddedbase64>=1.1.0",
-    "zope.interface>=4.6.0",
+    # Older releases do not build with current setuptools.
+    "zope.interface>=4.7.2",
 ]
 
 [project.optional-dependencies]
 # 0.13.1 is the oldest release with sentry_sdk.set_tag.
 sentry = ["sentry-sdk>=0.13.1"]
 # prometheus-client is a required dependency. The extra remains so that
-# installs which name it keep working.
+# installs which name it keep working. Its floor is the one above.
 prometheus = ["prometheus-client>=0.4.0"]
 
 [project.scripts]
@@ -54,15 +75,21 @@ sydent = "sydent.sydent:main"
 Repository = "https://github.com/element-hq/sydent"
 
 [dependency-groups]
+# The type stubs have no floor. CI runs mypy on the locked versions only.
 dev = [
-    "ruff",
+    # Older releases report UP038, which 0.13.0 drops.
+    "ruff>=0.13.0",
     "matrix-is-tester",
-    "mypy",
-    "mypy-zope",
-    "parameterized",
+    # Older releases do not know the exhaustive-match error code. CI runs mypy on
+    # the locked version only.
+    "mypy>=1.17.0",
+    # 1.0.13 is the oldest release that accepts mypy 1.17.0.
+    "mypy-zope>=1.0.13",
+    # Older releases call inspect.getargspec, which Python 3.11 removed.
+    "parameterized>=0.7.0",
     # 9.0 is the first release that reads the [tool.pytest] table.
     "pytest>=9.0",
-    # sentry-sdk is required for typechecking.
+    # mypy checks the Sentry calls. The floor is the sentry extra's.
     "sentry-sdk",
     "sortedcontainers-stubs",
     "types-Jinja2",
@@ -70,7 +97,8 @@ dev = [
     "types-netaddr",
     "types-PyOpenSSL",
     "types-PyYAML",
-    "towncrier",
+    # Older releases import pkg_resources, which uv does not install.
+    "towncrier>=23.6.0",
 ]
 
 [tool.uv.workspace]
