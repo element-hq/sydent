@@ -33,7 +33,7 @@ class TTLCache(Generic[K, V]):
         self._data: dict[K, _CacheEntry[K, V]] = {}
 
         # the _CacheEntries, sorted by expiry time
-        self._expiry_list: SortedList[_CacheEntry] = SortedList()
+        self._expiry_list: SortedList[_CacheEntry[K, V]] = SortedList()
 
         self._timer = timer
 

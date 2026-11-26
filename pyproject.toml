@@ -63,8 +63,10 @@ dev = [
     "pytest>=9.0",
     # sentry-sdk is required for typechecking.
     "sentry-sdk",
+    "sortedcontainers-stubs",
     "types-Jinja2",
     "types-mock",
+    "types-netaddr",
     "types-PyOpenSSL",
     "types-PyYAML",
     "towncrier",
@@ -129,6 +131,8 @@ plugins = "mypy_zope:plugin"
 strict = true
 # Code that a narrowed type makes unreachable often means a wrong annotation.
 warn_unreachable = true
+# Every imported library has types, so an Any from a missing import is a bug.
+disallow_any_unimported = true
 enable_error_code = [
     # Every type: ignore names the error it silences.
     "ignore-without-code",
@@ -161,15 +165,6 @@ files = [
     # "setup.py",
 ]
 mypy_path = "stubs"
-
-[[tool.mypy.overrides]]
-module = [
-    "idna",
-    "netaddr",
-    "signedjson.*",
-    "sortedcontainers",
-]
-ignore_missing_imports = true
 
 [tool.pytest]
 # The integration suite binds fixed ports, so a bare `pytest` leaves it out.
