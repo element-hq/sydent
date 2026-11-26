@@ -178,6 +178,9 @@ select = [
     "I",
     # pyupgrade: syntax and typing forms that Python 3.11 provides.
     "UP",
+    # flake8-bugbear: likely bugs, such as unused loop variables and exceptions
+    # raised without their cause.
+    "B",
 ]
 
 [build-system]

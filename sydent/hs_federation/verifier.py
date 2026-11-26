@@ -159,7 +159,7 @@ class Verifier:
                     continue
 
             server_keys = await self._getKeysForServer(server_name)
-            for key_name, sig in sigs.items():
+            for key_name, _sig in sigs.items():
                 if key_name in server_keys:
                     key_bytes = decode_base64(server_keys[key_name]["key"])
                     verify_key = signedjson.key.decode_verify_key_bytes(

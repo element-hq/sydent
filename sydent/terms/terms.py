@@ -76,8 +76,8 @@ class Terms:
         """
         urls = set()
         if self._rawTerms is not None:
-            for docName, doc in self._rawTerms["docs"].items():
-                for langName, lang in doc["langs"].items():
+            for _docName, doc in self._rawTerms["docs"].items():
+                for _langName, lang in doc["langs"].items():
                     url = lang["url"]
                     urls.add(url)
         return urls
