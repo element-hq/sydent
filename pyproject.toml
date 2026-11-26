@@ -63,8 +63,10 @@ dev = [
     "pytest>=9.0",
     # sentry-sdk is required for typechecking.
     "sentry-sdk",
+    "sortedcontainers-stubs",
     "types-Jinja2",
     "types-mock",
+    "types-netaddr",
     "types-PyOpenSSL",
     "types-PyYAML",
     "towncrier",
@@ -126,30 +128,56 @@ source-include = [
 
 [tool.mypy]
 plugins = "mypy_zope:plugin"
-show_error_codes = true
-namespace_packages = true
 strict = true
+# Code that a narrowed type makes unreachable often means a wrong annotation.
+warn_unreachable = true
+# Every imported library has types, so an Any from a missing import is a bug.
+disallow_any_unimported = true
+enable_error_code = [
+    # Every type: ignore names the error it silences.
+    "ignore-without-code",
+    # Conditions that are always true or always false.
+    "redundant-expr",
+    "truthy-bool",
+    "truthy-iterable",
+    # Names bound on only some paths.
+    "possibly-undefined",
+    # Calls to functions marked @deprecated.
+    "deprecated",
+    # Overrides that make a mutable attribute narrower.
+    "mutable-override",
+    # match statements that do not handle every case.
+    "exhaustive-match",
+    # A Self annotation that mypy would infer anyway.
+    "redundant-self",
+    # reveal_type without an import, which fails at runtime.
+    "unimported-reveal",
+]
 
 files = [
-    # Find files that pass with
-    #     find sydent tests -type d -not -name __pycache__ -exec bash -c "mypy --strict '{}' > /dev/null"  \; -print
-    "sydent"
-    # TODO the rest of CI checks these---mypy ought to too.
-    # "tests",
-    # "matrix_is_test",
-    # "scripts",
-    # "setup.py",
+    "sydent",
+    "scripts",
+    "scripts/generate-key",
+    "integration-tests/matrix_is_tester",
 ]
 mypy_path = "stubs"
+# scripts/ has no __init__.py. This names scripts/casefold_db.py
+# scripts.casefold_db, the module that the tests import.
+explicit_package_bases = true
 
 [[tool.mypy.overrides]]
-module = [
-    "idna",
-    "netaddr",
-    "signedjson.*",
-    "sortedcontainers",
-]
-ignore_missing_imports = true
+# The integration tests come from matrix-org/matrix-is-tester without
+# annotations. mypy still checks the bodies of their functions.
+module = "matrix_is_tester.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
+# The except clause in update_local_associations only catches an exception
+# raised inside the loop that binds `to_delete`.
+module = "scripts.casefold_db"
+disable_error_code = ["possibly-undefined"]
 
 [tool.pytest]
 # The integration suite binds fixed ports, so a bare `pytest` leaves it out.

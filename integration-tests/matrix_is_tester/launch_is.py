@@ -16,7 +16,7 @@ import atexit
 
 from matrix_is_tester.launcher import MatrixIsTestLauncher
 
-launchers = {}
+launchers: dict[str, MatrixIsTestLauncher] = {}
 
 
 def get_or_launch_is(with_terms=False):

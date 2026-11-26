@@ -278,7 +278,7 @@ class ResolvingMemoryReactorClock(MemoryReactorClock):
     A MemoryReactorClock that supports name resolution.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         lookups: dict[str, str] = {}

@@ -79,7 +79,7 @@ class IsApi:
             data = data.decode("UTF-8")
 
         matches = re.match(r"<<<(.*)>>>", data)
-        if not matches.group(1):
+        if matches is None or not matches.group(1):
             raise Exception("Failed to match token from mail")
 
         return matches.group(1)

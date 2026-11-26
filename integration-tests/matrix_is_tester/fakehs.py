@@ -56,6 +56,7 @@ def get_shared_fake_hs():
 
 
 def _destroy_shared():
+    assert shared_fake_hs is not None
     shared_fake_hs.tearDown()
 
 
@@ -70,22 +71,23 @@ class _FakeHomeserverRequestHandler(BaseHTTPRequestHandler):
             if token.startswith("user:"):
                 userid = base64.b64decode(token.split(":")[1])
             else:
-                resp = json.dumps(
+                error = json.dumps(
                     {
                         "errcode": "M_UNKNOWN_TOKEN",
                         "error": "Not a valid token: try again.",
                     }
-                )
+                ).encode("UTF-8")
                 self.send_response(401)
-                self.send_header("Content-Length", len(resp))
+                self.send_header("Content-Length", str(len(error)))
                 self.end_headers()
 
-                self.wfile.write(resp)
+                self.wfile.write(error)
+                return
 
             resp = json.dumps({"sub": userid.decode("UTF-8")}).encode("UTF-8")
 
             self.send_response(200)
-            self.send_header("Content-Length", len(resp))
+            self.send_header("Content-Length", str(len(resp)))
             self.end_headers()
 
             self.wfile.write(resp)

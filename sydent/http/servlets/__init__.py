@@ -122,7 +122,7 @@ def get_args(
         # backwards-compat option, we convert this one.
         request_args = {}
         for k, v in request_args_bytes.items():
-            if isinstance(v, list) and len(v) == 1:
+            if len(v) == 1:
                 try:
                     request_args[k.decode("UTF-8")] = v[0].decode("UTF-8")
                 except UnicodeDecodeError as e:

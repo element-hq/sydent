@@ -839,9 +839,11 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
     { name = "sentry-sdk" },
+    { name = "sortedcontainers-stubs" },
     { name = "towncrier" },
     { name = "types-jinja2" },
     { name = "types-mock" },
+    { name = "types-netaddr" },
     { name = "types-pyopenssl" },
     { name = "types-pyyaml" },
 ]
@@ -877,9 +879,11 @@ dev = [
     { name = "pytest", specifier = ">=9.0" },
     { name = "ruff" },
     { name = "sentry-sdk" },
+    { name = "sortedcontainers-stubs" },
     { name = "towncrier" },
     { name = "types-jinja2" },
     { name = "types-mock" },
+    { name = "types-netaddr" },
     { name = "types-pyopenssl" },
     { name = "types-pyyaml" },
 ]
@@ -1257,6 +1261,19 @@ wheels = [
 ]
 
 [[package]]
+name = "sortedcontainers-stubs"
+version = "2.4.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sortedcontainers" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/19/13/2940fafc136048ec99c932bf0077613f1ae4693a313705162982335fe5fb/sortedcontainers_stubs-2.4.3.tar.gz", hash = "sha256:ba172daceda4bd617d2f6ffd24582261a494da92705409651967faa40ebc75dd", size = 6186, upload-time = "2025-04-23T07:42:00.238Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/3e/b0fbd7621e6430d33d234ad5e2dc9b0d4df575518f4790a2af934e1029ea/sortedcontainers_stubs-2.4.3-py3-none-any.whl", hash = "sha256:4496109dfa6645e4b675f57fbc7e42ec4d1bed2c74aab7fa379e0795e49fe406", size = 8816, upload-time = "2025-04-23T07:41:58.625Z" },
+]
+
+[[package]]
 name = "towncrier"
 version = "26.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1327,6 +1344,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ec/a4/26595e2a9407752c2e3cd5b17d7884db847e39834a2575cf15b5c3b19a27/types_mock-5.2.0.20260518.tar.gz", hash = "sha256:49af9c18aac4caa90e0e1e8437e2160cd8b3f126053dae6453d65b393590fcf9", size = 11577, upload-time = "2026-05-18T06:02:42.607Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/82/d6/da3bf7cc26ebe587e8c50a505d302f5755840fc24fbbd704b770c43b764b/types_mock-5.2.0.20260518-py3-none-any.whl", hash = "sha256:3c511875b6f37d30c70add3e72265d1c21202b8544751361e3ca94f7a757a03d", size = 10459, upload-time = "2026-05-18T06:02:41.224Z" },
+]
+
+[[package]]
+name = "types-netaddr"
+version = "1.3.0.20260724"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/b0/f78e583f5e3758b33bfbf1ae05b869e4ddc4302aff7208174be73ebf684d/types_netaddr-1.3.0.20260724.tar.gz", hash = "sha256:f8236f872a6f86d843aa3a10d537049f426fe86b5ad9f93424e8d8f037879f66", size = 15689, upload-time = "2026-07-24T04:59:13.93Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e7/dd/8a4d9f07b31a645c15faee2e8f963bbe00cbc0b0add441a2eabb1fe64ee5/types_netaddr-1.3.0.20260724-py3-none-any.whl", hash = "sha256:b599f28d4394f47722c0e8effb4e2c9847124080b0a52ef5ab626580a7f77ace", size = 19223, upload-time = "2026-07-24T04:59:12.908Z" },
 ]
 
 [[package]]

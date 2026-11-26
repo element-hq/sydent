@@ -34,11 +34,7 @@ class PeerStore:
             (name,),
         )
 
-        # Type safety: if the query returns no rows, pubkeys will be empty
-        # and we'll return None before using serverName. Otherwise, we'll read
-        # at least one row and assign serverName a string value, because the
-        # `name` column is declared `not null` in the DB.
-        serverName: str = None  # type: ignore[assignment]
+        serverName: str | None = None
         port: int | None = None
         lastSentVer: int | None = None
         pubkeys: dict[str, str] = {}
@@ -53,6 +49,8 @@ class PeerStore:
         if len(pubkeys) == 0:
             return None
 
+        # At least one row was read, and the `name` column is `not null`.
+        assert serverName is not None
         p = RemotePeer(self.sydent, serverName, port, pubkeys, lastSentVer)
 
         return p
@@ -71,18 +69,9 @@ class PeerStore:
 
         peers = []
 
-        # Safety: we need to convince ourselves that `peername` will be not None
-        # when passed to `RemotePeer`.
-        #
-        # If `res` is empty, then `pubkeys` will start empty and never be written to.
-        # So we will never create a `RemotePeer`. That's fine.
-        #
-        # Otherwise we process at least one row. The first row we process will
-        # satisfy `row[0] is not None` because `name` is nonnull in the schema.
-        # `pubkeys` will be empty, so we skip the innermost `if` and assign peername
-        # to be a string. There are no further assignments of `None` to `peername`;
-        # it will be a string whenever we use it.
-        peername: str = None  # type: ignore[assignment]
+        # `pubkeys` is non-empty only after a row has set `peername`, and the
+        # `name` column is `not null`, so the asserts below hold.
+        peername: str | None = None
         port = None
         lastSentVer = None
         pubkeys: dict[str, str] = {}
@@ -91,6 +80,7 @@ class PeerStore:
         for row in res.fetchall():
             if row[0] != peername:
                 if len(pubkeys) > 0:
+                    assert peername is not None
                     p = RemotePeer(self.sydent, peername, port, pubkeys, lastSentVer)
                     peers.append(p)
                     pubkeys = {}
@@ -100,6 +90,7 @@ class PeerStore:
             pubkeys[row[3]] = row[4]
 
         if len(pubkeys) > 0:
+            assert peername is not None
             p = RemotePeer(self.sydent, peername, port, pubkeys, lastSentVer)
             peers.append(p)
 

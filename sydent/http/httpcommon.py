@@ -91,7 +91,8 @@ class BodyExceededMaxSize(Exception):
 class _DiscardBodyWithMaxSizeProtocol(protocol.Protocol):
     """A protocol which immediately errors upon receiving data."""
 
-    transport: ITCPTransport
+    # BaseProtocol declares an ITransport, which has no abortConnection.
+    transport: ITCPTransport  # type: ignore[mutable-override]
 
     def __init__(self, deferred: "defer.Deferred[bytes]") -> None:
         self.deferred = deferred
@@ -116,7 +117,8 @@ class _DiscardBodyWithMaxSizeProtocol(protocol.Protocol):
 class _ReadBodyWithMaxSizeProtocol(protocol.Protocol):
     """A protocol which reads body to a stream, erroring if the body exceeds a maximum size."""
 
-    transport: ITCPTransport
+    # See _DiscardBodyWithMaxSizeProtocol.transport.
+    transport: ITCPTransport  # type: ignore[mutable-override]
 
     def __init__(self, deferred: "defer.Deferred[bytes]", max_size: int | None) -> None:
         self.stream = BytesIO()
