@@ -236,9 +236,8 @@ class SydentConfig:
         needs_saving = self.parse_from_config_parser(cfg)
 
         if needs_saving:
-            fp = open(config_file, "w")
-            cfg.write(fp)
-            fp.close()
+            with open(config_file, "w") as fp:
+                cfg.write(fp)
 
     def parse_config_dict(self, config_dict: dict[str, dict[str, str]]) -> None:
         """

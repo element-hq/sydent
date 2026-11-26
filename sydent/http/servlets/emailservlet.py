@@ -155,7 +155,8 @@ class EmailValidateCodeServlet(SydentResource):
             templateFile = self.sydent.config.http.verify_response_template
 
         request.setHeader("Content-Type", "text/html")
-        res = open(templateFile).read() % {"message": msg}
+        with open(templateFile) as template:
+            res = template.read() % {"message": msg}
 
         return res.encode("UTF-8")
 

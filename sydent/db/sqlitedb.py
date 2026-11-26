@@ -46,14 +46,13 @@ class SqliteDatabase:
             if not f.endswith(".sql"):
                 continue
             scriptPath = os.path.join(schemaDir, f)
-            fp = open(scriptPath)
-            try:
-                logger.info("Importing %s", scriptPath)
-                c.executescript(fp.read())
-            except Exception:
-                logger.error("Error importing %s", scriptPath)
-                raise
-            fp.close()
+            with open(scriptPath) as fp:
+                try:
+                    logger.info("Importing %s", scriptPath)
+                    c.executescript(fp.read())
+                except Exception:
+                    logger.error("Error importing %s", scriptPath)
+                    raise
 
         c.close()
         self.db.commit()

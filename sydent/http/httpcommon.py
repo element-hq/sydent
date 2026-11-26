@@ -51,7 +51,8 @@ class SslComponents:
             return None
 
         try:
-            fp = open(privKeyAndCertFilename)
+            with open(privKeyAndCertFilename) as fp:
+                authData = fp.read()
         except OSError:
             logger.warning(
                 "Unable to read private key / cert file from %s: not starting the replication HTTPS server "
@@ -60,8 +61,6 @@ class SslComponents:
             )
             return None
 
-        authData = fp.read()
-        fp.close()
         return twisted.internet.ssl.PrivateCertificate.loadPEM(authData)
 
     def makeTrustRoot(self) -> IOpenSSLTrustRoot:
@@ -70,9 +69,8 @@ class SslComponents:
         caCertFilename = self.sydent.config.http.ca_cert_file
         if len(caCertFilename) > 0:
             try:
-                fp = open(caCertFilename)
-                caCert = twisted.internet.ssl.Certificate.loadPEM(fp.read())
-                fp.close()
+                with open(caCertFilename) as fp:
+                    caCert = twisted.internet.ssl.Certificate.loadPEM(fp.read())
             except Exception:
                 logger.warning("Failed to open CA cert file %s", caCertFilename)
                 raise

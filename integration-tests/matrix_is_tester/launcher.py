@@ -72,14 +72,14 @@ class MatrixIsTestLauncher:
 
         # One file per instance, because the suite runs two Sydents at once.
         self.stderr_path = os.path.join(testsubject_path, "sydent-%d.stderr" % port)
-        stderr_fp = open(self.stderr_path, "w")
-
-        # Sydent is installed in the same environment as this package.
-        self.process = Popen(
-            args=[sys.executable, "-m", "sydent.sydent"],
-            cwd=self.tmpdir,
-            stderr=stderr_fp,
-        )
+        # Sydent is installed in the same environment as this package. Popen
+        # gives the child its own copy of the file descriptor.
+        with open(self.stderr_path, "w") as stderr_fp:
+            self.process = Popen(
+                args=[sys.executable, "-m", "sydent.sydent"],
+                cwd=self.tmpdir,
+                stderr=stderr_fp,
+            )
         self._wait_until_listening(port)
 
         self._baseUrl = "http://localhost:%d" % (port,)
