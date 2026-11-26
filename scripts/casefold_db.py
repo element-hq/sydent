@@ -352,7 +352,7 @@ def update_global_associations(
         if len(assoc_tuples) > 1:
             # Iterate over all associations except for the first one, since we've already
             # processed it.
-            for address, mxid, _, _ in assoc_tuples[1:]:
+            for address, _, _, _ in assoc_tuples[1:]:
                 to_delete.append((address,))
 
     logger.info(
