@@ -199,6 +199,13 @@ select = [
     # Ruff's own rules: mutable defaults, unused unpacked variables and unused
     # noqa comments.
     "RUF",
+    # flake8-logging-format and flake8-logging: log calls that format their
+    # message eagerly or misuse the logging API.
+    "G",
+    "LOG",
+    # pylint errors, such as log calls whose arguments do not match their
+    # placeholders.
+    "PLE",
 ]
 
 [build-system]
