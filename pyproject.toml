@@ -54,9 +54,7 @@ Repository = "https://github.com/element-hq/sydent"
 
 [dependency-groups]
 dev = [
-    "black",
     "ruff",
-    "isort",
     # Later revisions add test_versions, which requests /versions rather than
     # /_matrix/identity/versions and so fails against Sydent.
     "matrix-is-tester @ git+https://github.com/matrix-org/matrix-is-tester@c87641b9866b5fd6d648d829283c18fbb06d1bbe",
@@ -120,12 +118,6 @@ source-include = [
         name = "Internal Changes"
         showcontent = true
 
-[tool.isort]
-profile = "black"
-
-[tool.black]
-target-version = ['py311']
-
 [tool.mypy]
 plugins = "mypy_zope:plugin"
 show_error_codes = true
@@ -158,9 +150,9 @@ line-length = 88
 
 [tool.ruff.lint]
 ignore = [
+    # The formatter wraps what it can. The remaining long lines are strings and
+    # comments.
     "E501",
-    "F401",
-    "F821",
 ]
 select = [
     # pycodestyle checks.
@@ -168,6 +160,8 @@ select = [
     "W",
     # pyflakes checks.
     "F",
+    # isort checks.
+    "I",
 ]
 
 [build-system]
