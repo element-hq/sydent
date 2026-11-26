@@ -5,7 +5,7 @@ from twisted.python.failure import Failure
 EventDict = dict[str, Any]
 
 def err(
-    _stuff: None | Exception | Failure = ...,
+    _stuff: Exception | Failure | None = ...,
     _why: str | None = ...,
     **kw: object,
 ) -> None: ...

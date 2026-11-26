@@ -58,7 +58,7 @@ def pick_server_from_list(server_list: list[Server]) -> tuple[bytes, int]:
     # cache of servers known to be "down" and filter them out
 
     min_priority = min(s.priority for s in server_list)
-    eligible_servers = list(s for s in server_list if s.priority == min_priority)
+    eligible_servers = [s for s in server_list if s.priority == min_priority]
     total_weight = sum(s.weight for s in eligible_servers)
     target_weight = random.randint(0, total_weight)
 

@@ -180,8 +180,6 @@ class FakeChannel:
 class FakeSite:
     """A fake Twisted Web Site."""
 
-    pass
-
 
 def make_request(
     reactor,

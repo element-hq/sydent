@@ -110,7 +110,7 @@ def is_valid_matrix_server_name(string: str) -> bool:
     """
 
     try:
-        host, port = parse_server_name(string)
+        host, _port = parse_server_name(string)
     except ValueError:
         return False
 

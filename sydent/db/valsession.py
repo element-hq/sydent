@@ -116,7 +116,7 @@ class ThreePidValSessionStore:
 
         cur.execute(
             "insert into threepid_validation_sessions ('id', 'medium', 'address', 'clientSecret', 'mtime')"
-            + " values (?, ?, ?, ?, ?)",
+            " values (?, ?, ?, ?, ?)",
             (sid, medium, address, clientSecret, mtime),
         )
         if commit:
@@ -181,7 +181,7 @@ class ThreePidValSessionStore:
 
         cur.execute(
             "select id, medium, address, clientSecret, validated, mtime from "
-            + "threepid_validation_sessions where id = ?",
+            "threepid_validation_sessions where id = ?",
             (sid,),
         )
         row: tuple[int, str, str, str, int | None, int] | None = cur.fetchone()

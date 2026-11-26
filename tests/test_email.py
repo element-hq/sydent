@@ -23,7 +23,7 @@ class TestRequestCode(unittest.TestCase):
     def _make_request(self, url: str, body: JsonDict | None = None) -> Mock:
         # Patch out the email sending so we can investigate the resulting email.
         with patch("sydent.util.emailutils.smtplib") as smtplib:
-            request, channel = make_request(
+            _request, channel = make_request(
                 self.sydent.reactor,
                 self.sydent.clientApiHttpServer.factory,
                 "POST",

@@ -250,7 +250,7 @@ class SydentConfig:
         for section, section_dict in config_dict.items():
             if section not in config:
                 config[section] = {}
-            for option in section_dict.keys():
+            for option in section_dict:
                 config[section][option] = config_dict[section][option]
 
         # Build a ConfigParser from the merged dictionary

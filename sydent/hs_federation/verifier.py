@@ -37,15 +37,11 @@ class NoAuthenticationError(Exception):
     Raised when no signature is provided that could be authenticated
     """
 
-    pass
-
 
 class InvalidServerName(Exception):
     """
     Raised when the provided origin parameter is not a valid hostname (plus optional port).
     """
-
-    pass
 
 
 class Verifier:

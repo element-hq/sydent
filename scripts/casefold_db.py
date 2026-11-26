@@ -65,8 +65,6 @@ class CantSendEmailException(Exception):
     attempts.
     """
 
-    pass
-
 
 def calculate_lookup_hash(sydent: Sydent, address: str) -> str:
     pepper = sydent.threepidBinder.hashing_store.get_lookup_pepper()

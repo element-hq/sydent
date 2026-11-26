@@ -57,7 +57,7 @@ class TestRequestCode(unittest.TestCase):
             "sydent.sms.openmarket.OpenMarketSMS.sendTextSMS",
             new_callable=AsyncMock,
         ) as sendTextSMS:
-            request, channel = make_request(
+            _request, channel = make_request(
                 self.sydent.reactor,
                 self.sydent.clientApiHttpServer.factory,
                 "POST",
@@ -103,7 +103,7 @@ class TestRequestCode(unittest.TestCase):
         resp = FakeResponse(code=400, headers=header), {}
         post_json.return_value = resp
         self.sydent.run()
-        request, channel = make_request(
+        _request, channel = make_request(
             self.sydent.reactor,
             self.sydent.clientApiHttpServer.factory,
             "POST",

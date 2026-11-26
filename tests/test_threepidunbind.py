@@ -42,7 +42,7 @@ class ThreepidUnbindTestCase(unittest.TestCase):
         with patch.object(
             self.sydent.sig_verifier, "authenticate_request", side_effect=exc
         ):
-            request, channel = make_request(
+            _request, channel = make_request(
                 self.sydent.reactor,
                 self.sydent.clientApiHttpServer.factory,
                 "POST",

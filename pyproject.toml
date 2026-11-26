@@ -167,6 +167,11 @@ ignore = [
     # printf-style formatting works the same on Python 3.11. Rewriting it as
     # f-strings has no automatic fix and changes nothing at runtime.
     "UP031",
+    # Nested if statements often mirror the comments between them. Merging them
+    # gains nothing.
+    "SIM102",
+    # try/except/pass reads as clearly as contextlib.suppress.
+    "SIM105",
 ]
 select = [
     # pycodestyle checks.
@@ -181,6 +186,19 @@ select = [
     # flake8-bugbear: likely bugs, such as unused loop variables and exceptions
     # raised without their cause.
     "B",
+    # flake8-comprehensions: redundant list, set and dict calls.
+    "C4",
+    # flake8-pie: no-op statements such as an unneeded pass.
+    "PIE",
+    # flake8-simplify: files opened without a with block, and conditions with a
+    # simpler equivalent.
+    "SIM",
+    # flake8-implicit-str-concat: adjacent string literals, which are often a
+    # missing comma.
+    "ISC",
+    # Ruff's own rules: mutable defaults, unused unpacked variables and unused
+    # noqa comments.
+    "RUF",
 ]
 
 [build-system]

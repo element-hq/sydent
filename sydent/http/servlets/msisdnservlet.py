@@ -160,7 +160,7 @@ class MsisdnValidateCodeServlet(SydentResource):
 
         args = get_args(request, ("token", "sid", "client_secret"))
         resp = self.do_validate_request(request)
-        if "success" in resp and resp["success"]:
+        if resp.get("success"):
             msg = "Verification successful! Please return to your Matrix client to continue."
             if "next_link" in args:
                 next_link = args["next_link"]
