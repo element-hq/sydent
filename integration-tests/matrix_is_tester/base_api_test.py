@@ -17,15 +17,13 @@
 # limitations under the License.
 
 import json
-
-# These are standard python unit tests, but are generally intended
-# to be run with trial. Trial doesn't capture logging nicely if you
-# use python 'logging': it only works if you use Twisted's own.
-from twisted.python import log
+import logging
 
 from matrix_is_tester.is_api import IsApi
 from matrix_is_tester.launch_is import get_or_launch_is
 from matrix_is_tester.mailsink import get_shared_mailsink
+
+logger = logging.getLogger(__name__)
 
 
 class BaseApiTest(object):
@@ -47,7 +45,7 @@ class BaseApiTest(object):
 
     def test_request_email_code(self):
         body = self.api.request_email_code("fakeemail1@nowhere.test", "sekrit", 1)
-        log.msg("Got response %r" % (body,))
+        logger.info("Got response %r", body)
         self.assertIn("sid", body)
         self.mailSink.get_mail()
 
@@ -132,7 +130,7 @@ class BaseApiTest(object):
             self.assertTrue(is_valid_body["valid"])
 
         mail = self.mailSink.get_mail()
-        log.msg("Got email (invite): %r" % (mail,))
+        logger.info("Got email (invite): %r", mail)
         mail_object = json.loads(mail["data"])
         self.assertEqual(mail_object["token"], body["token"])
         self.assertEqual(mail_object["room_alias"], "#alias:fake.test")
