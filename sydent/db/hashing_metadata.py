@@ -9,8 +9,9 @@
 
 # Actions on the hashing_metadata table which is defined in the migration process in
 # sqlitedb.py
+from collections.abc import Callable
 from sqlite3 import Cursor
-from typing import TYPE_CHECKING, Callable, List, Literal, Optional, Tuple
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from sydent.sydent import Sydent
@@ -19,9 +20,9 @@ if TYPE_CHECKING:
 class HashingMetadataStore:
     def __init__(self, sydent: "Sydent") -> None:
         self.sydent = sydent
-        self._cached_lookup_pepper: Optional[str] = None
+        self._cached_lookup_pepper: str | None = None
 
-    def get_lookup_pepper(self) -> Optional[str]:
+    def get_lookup_pepper(self) -> str | None:
         """Return the value of the current lookup pepper from the db
 
         :return: A pepper if it exists in the database, or None if one does
@@ -39,7 +40,7 @@ class HashingMetadataStore:
         # But I think the application code is such that either
         #  - hashing_metadata contains no rows
         #  - or it contains exactly one row with a nonnull lookup_pepper.
-        row: Optional[Tuple[str]] = res.fetchone()
+        row: tuple[str] | None = res.fetchone()
 
         if not row:
             return None
@@ -109,7 +110,7 @@ class HashingMetadataStore:
         # Medium/address combos are marked as UNIQUE in the database
         sql = "SELECT COUNT(*) FROM %s" % table
         res = cur.execute(sql)
-        row: Tuple[int] = res.fetchone()
+        row: tuple[int] = res.fetchone()
         row_count = row[0]
 
         # Iterate through each medium, address combo, hash it,
@@ -123,7 +124,7 @@ class HashingMetadataStore:
                 count,
             )
             res = cur.execute(sql)
-            rows: List[Tuple[str, str]] = res.fetchall()
+            rows: list[tuple[str, str]] = res.fetchall()
 
             for medium, address in rows:
                 # Skip broken db entry

@@ -8,7 +8,7 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any
 
 from sydent.threepid import ThreepidAssociation
 from sydent.threepid.signer import Signer
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 # Key: id from associations db table
 # Value: an association dict. Roughly speaking, a signed
 # version of sydent.db.TheepidAssociation.
-SignedAssociations = Dict[int, Dict[str, Any]]
+SignedAssociations = dict[int, dict[str, Any]]
 
 
 logger = logging.getLogger(__name__)
@@ -58,8 +58,8 @@ class LocalAssociationStore:
         self.sydent.db.commit()
 
     def getAssociationsAfterId(
-        self, afterId: Optional[int], limit: Optional[int] = None
-    ) -> Tuple[Dict[int, ThreepidAssociation], Optional[int]]:
+        self, afterId: int | None, limit: int | None = None
+    ) -> tuple[dict[int, ThreepidAssociation], int | None]:
         """
         Retrieves every association after the given ID.
 
@@ -90,15 +90,15 @@ class LocalAssociationStore:
         maxId = None
 
         assocs = {}
-        row: Tuple[
+        row: tuple[
             int,
             str,
             str,
-            Optional[str],
-            Optional[str],
-            Optional[int],
-            Optional[int],
-            Optional[int],
+            str | None,
+            str | None,
+            int | None,
+            int | None,
+            int | None,
         ]
         for row in res.fetchall():
             assoc = ThreepidAssociation(
@@ -110,8 +110,8 @@ class LocalAssociationStore:
         return assocs, maxId
 
     def getSignedAssociationsAfterId(
-        self, afterId: Optional[int], limit: Optional[int] = None
-    ) -> Tuple[SignedAssociations, Optional[int]]:
+        self, afterId: int | None, limit: int | None = None
+    ) -> tuple[SignedAssociations, int | None]:
         """Get associations after a given ID, and sign them before returning
 
         :param afterId: The ID to return results after (not inclusive)
@@ -135,7 +135,7 @@ class LocalAssociationStore:
 
         return assocs, maxId
 
-    def removeAssociation(self, threepid: Dict[str, str], mxid: str) -> None:
+    def removeAssociation(self, threepid: dict[str, str], mxid: str) -> None:
         """
         Delete the association between a 3PID and a MXID, if it exists. If the
         association doesn't exist, log and do nothing. Please note that email
@@ -157,7 +157,7 @@ class LocalAssociationStore:
             "WHERE medium = ? AND address = ? AND mxid = ?",
             (threepid["medium"], threepid["address"], mxid),
         )
-        row: Tuple[int] = cur.fetchone()
+        row: tuple[int] = cur.fetchone()
         if row[0] > 0:
             ts = time_msec()
             cur.execute(
@@ -191,7 +191,7 @@ class GlobalAssociationStore:
 
     def signedAssociationStringForThreepid(
         self, medium: str, address: str
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Retrieve the JSON for the signed association matching the provided 3PID,
         if one exists.
@@ -215,7 +215,7 @@ class GlobalAssociationStore:
             (medium, address, time_msec(), time_msec()),
         )
 
-        row: Optional[Tuple[str]] = res.fetchone()
+        row: tuple[str] | None = res.fetchone()
 
         if not row:
             return None
@@ -224,7 +224,7 @@ class GlobalAssociationStore:
 
         return sgAssocStr
 
-    def getMxid(self, medium: str, normalised_address: str) -> Optional[str]:
+    def getMxid(self, medium: str, normalised_address: str) -> str | None:
         """
         Retrieves the MXID associated with a 3PID. Please note that
         emails need to be casefolded before calling this function.
@@ -243,7 +243,7 @@ class GlobalAssociationStore:
             (medium, normalised_address, time_msec(), time_msec()),
         )
 
-        row: Tuple[Optional[str]] = res.fetchone()
+        row: tuple[str | None] = res.fetchone()
 
         if not row:
             return None
@@ -251,8 +251,8 @@ class GlobalAssociationStore:
         return row[0]
 
     def getMxids(
-        self, threepid_tuples: List[Tuple[str, str]]
-    ) -> List[Tuple[str, str, str]]:
+        self, threepid_tuples: list[tuple[str, str]]
+    ) -> list[tuple[str, str, str]]:
         """Given a list of threepid_tuples, return the same list but with
         mxids appended to each tuple for which a match was found in the
         database for. Output is ordered by medium, address, timestamp DESC
@@ -291,7 +291,7 @@ class GlobalAssociationStore:
 
             results = []
             current = None
-            row: Tuple[str, str, int, str]
+            row: tuple[str, str, int, str]
             for row in res.fetchall():
                 # only use the most recent entry for each
                 # threepid (they're sorted by ts)
@@ -348,7 +348,7 @@ class GlobalAssociationStore:
         if commit:
             self.sydent.db.commit()
 
-    def lastIdFromServer(self, server: str) -> Optional[int]:
+    def lastIdFromServer(self, server: str) -> int | None:
         """
         Retrieves the ID of the last association received from the given peer.
 
@@ -363,7 +363,7 @@ class GlobalAssociationStore:
             "where originServer = ?",
             (server,),
         )
-        row: Tuple[int, int] = res.fetchone()
+        row: tuple[int, int] = res.fetchone()
 
         if row[1] == 0:
             return None
@@ -393,7 +393,7 @@ class GlobalAssociationStore:
         )
         self.sydent.db.commit()
 
-    def retrieveMxidsForHashes(self, addresses: List[str]) -> Dict[str, str]:
+    def retrieveMxidsForHashes(self, addresses: list[str]) -> dict[str, str]:
         """Returns a mapping from hash: mxid from a list of given lookup_hash values
 
         :param addresses: An array of lookup_hash values to check against the db

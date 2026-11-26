@@ -11,7 +11,8 @@ import copy
 import functools
 import json
 import logging
-from typing import Any, Awaitable, Callable, Iterable, TypeVar
+from collections.abc import Awaitable, Callable, Iterable
+from typing import Any, TypeVar
 
 from prometheus_client import Counter
 from twisted.internet import defer

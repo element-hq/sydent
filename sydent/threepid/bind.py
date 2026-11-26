@@ -10,7 +10,7 @@
 import collections
 import logging
 import math
-from typing import TYPE_CHECKING, Any, Dict, List, Union
+from typing import TYPE_CHECKING, Any
 
 import signedjson.sign
 from twisted.internet import defer
@@ -39,7 +39,7 @@ class ThreepidBinder:
         self.sydent = sydent
         self.hashing_store = HashingMetadataStore(sydent)
 
-    def addBinding(self, medium: str, address: str, mxid: str) -> Dict[str, Any]:
+    def addBinding(self, medium: str, address: str, mxid: str) -> dict[str, Any]:
         """
         Binds the given 3pid to the given mxid.
 
@@ -87,7 +87,7 @@ class ThreepidBinder:
 
         joinTokenStore = JoinTokenStore(self.sydent)
         pendingJoinTokens = joinTokenStore.getTokens(medium, normalised_address)
-        invites: List[Dict[str, Any]] = []
+        invites: list[dict[str, Any]] = []
         for token in pendingJoinTokens:
             presigned = {
                 "mxid": mxid,
@@ -110,7 +110,7 @@ class ThreepidBinder:
 
         return sgassoc
 
-    def removeBinding(self, threepid: Dict[str, str], mxid: str) -> None:
+    def removeBinding(self, threepid: dict[str, str], mxid: str) -> None:
         """
         Removes the binding between a given 3PID and a given MXID.
 
@@ -125,7 +125,7 @@ class ThreepidBinder:
         localAssocStore.removeAssociation(threepid, mxid)
         self.sydent.pusher.doLocalPush()
 
-    async def _notify(self, assoc: Dict[str, Any], attempt: int) -> None:
+    async def _notify(self, assoc: dict[str, Any], attempt: int) -> None:
         """
         Sends data about a new association (and, if necessary, the associated invites)
         to the associated MXID's homeserver.
@@ -191,7 +191,7 @@ class ThreepidBinder:
                 )
 
     def _notifyErrback(
-        self, assoc: Dict[str, Any], attempt: int, error: Union[Exception, str]
+        self, assoc: dict[str, Any], attempt: int, error: Exception | str
     ) -> None:
         """
         Handles errors when trying to send an association down to a homeserver by

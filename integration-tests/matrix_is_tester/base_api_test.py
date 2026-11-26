@@ -26,7 +26,7 @@ from matrix_is_tester.mailsink import get_shared_mailsink
 logger = logging.getLogger(__name__)
 
 
-class BaseApiTest(object):
+class BaseApiTest:
     """
     Not a test case itself, but can be subclassed to test APIs common
     between versions.

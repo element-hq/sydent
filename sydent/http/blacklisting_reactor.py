@@ -8,7 +8,7 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import logging
-from typing import Any, List, Optional
+from typing import Any
 
 from netaddr import IPAddress, IPSet
 from twisted.internet.address import IPv4Address, IPv6Address
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def check_against_blacklist(
-    ip_address: IPAddress, ip_whitelist: Optional[IPSet], ip_blacklist: IPSet
+    ip_address: IPAddress, ip_whitelist: IPSet | None, ip_blacklist: IPSet
 ) -> bool:
     """
     Compares an IP address to allowed and disallowed IP sets.
@@ -52,7 +52,7 @@ class _IPBlacklistingResolver:
     def __init__(
         self,
         reactor: IReactorPluggableNameResolver,
-        ip_whitelist: Optional[IPSet],
+        ip_whitelist: IPSet | None,
         ip_blacklist: IPSet,
     ):
         """
@@ -68,7 +68,7 @@ class _IPBlacklistingResolver:
     def resolveHostName(
         self, recv: IResolutionReceiver, hostname: str, portNumber: int = 0
     ) -> IResolutionReceiver:
-        addresses: List[IAddress] = []
+        addresses: list[IAddress] = []
 
         def _callback() -> None:
             has_bad_ip = False
@@ -125,7 +125,7 @@ class BlacklistingReactorWrapper:
     def __init__(
         self,
         reactor: IReactorPluggableNameResolver,
-        ip_whitelist: Optional[IPSet],
+        ip_whitelist: IPSet | None,
         ip_blacklist: IPSet,
     ):
         self._reactor = reactor

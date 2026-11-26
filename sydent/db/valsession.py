@@ -8,7 +8,7 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 from random import SystemRandom
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING
 
 import sydent.util.tokenutils
 from sydent.util import time_msec
@@ -33,7 +33,7 @@ class ThreePidValSessionStore:
 
     def getOrCreateTokenSession(
         self, medium: str, address: str, clientSecret: str
-    ) -> Tuple[ValidationSession, TokenInfo]:
+    ) -> tuple[ValidationSession, TokenInfo]:
         """
         Retrieves the validation session for a given medium, address and client secret,
         or creates one if none was found.
@@ -53,7 +53,7 @@ class ThreePidValSessionStore:
             "where s.medium = ? and s.address = ? and s.clientSecret = ? and t.validationSession = s.id",
             (medium, address, clientSecret),
         )
-        row: Optional[Tuple[int, str, str, str, Optional[int], int, str, int]] = (
+        row: tuple[int, str, str, str, int | None, int, str, int] | None = (
             cur.fetchone()
         )
 
@@ -168,7 +168,7 @@ class ThreePidValSessionStore:
         )
         self.sydent.db.commit()
 
-    def getSessionById(self, sid: int) -> Optional[ValidationSession]:
+    def getSessionById(self, sid: int) -> ValidationSession | None:
         """
         Retrieves the session matching the given sid.
 
@@ -184,7 +184,7 @@ class ThreePidValSessionStore:
             + "threepid_validation_sessions where id = ?",
             (sid,),
         )
-        row: Optional[Tuple[int, str, str, str, Optional[int], int]] = cur.fetchone()
+        row: tuple[int, str, str, str, int | None, int] | None = cur.fetchone()
 
         if not row:
             return None
@@ -193,7 +193,7 @@ class ThreePidValSessionStore:
 
     def getTokenSessionById(
         self, sid: int
-    ) -> Optional[Tuple[ValidationSession, TokenInfo]]:
+    ) -> tuple[ValidationSession, TokenInfo] | None:
         """
         Retrieves a validation session using the session's ID.
 
@@ -209,7 +209,7 @@ class ThreePidValSessionStore:
             "where s.id = ? and t.validationSession = s.id",
             (sid,),
         )
-        row: Optional[Tuple[int, str, str, str, Optional[int], int, str, int]]
+        row: tuple[int, str, str, str, int | None, int, str, int] | None
         row = cur.fetchone()
 
         if row:

@@ -164,6 +164,9 @@ ignore = [
     # The formatter wraps what it can. The remaining long lines are strings and
     # comments.
     "E501",
+    # printf-style formatting works the same on Python 3.11. Rewriting it as
+    # f-strings has no automatic fix and changes nothing at runtime.
+    "UP031",
 ]
 select = [
     # pycodestyle checks.
@@ -173,6 +176,8 @@ select = [
     "F",
     # isort checks.
     "I",
+    # pyupgrade: syntax and typing forms that Python 3.11 provides.
+    "UP",
 ]
 
 [build-system]

@@ -10,7 +10,7 @@
 import json
 import logging
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Dict, Generic, Optional, Tuple, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 from twisted.web.client import Agent, FileBodyProducer
 from twisted.web.http_headers import Headers
@@ -39,7 +39,7 @@ class HTTPClient(Generic[AgentType]):
 
     agent: AgentType
 
-    async def get_json(self, uri: str, max_size: Optional[int] = None) -> JsonDict:
+    async def get_json(self, uri: str, max_size: int | None = None) -> JsonDict:
         """Make a GET request to an endpoint returning JSON and parse result
 
         :param uri: The URI to make a GET request to.
@@ -68,7 +68,7 @@ class HTTPClient(Generic[AgentType]):
         return cast(JsonDict, json_body)
 
     async def post_json_get_nothing(
-        self, uri: str, post_json: JsonDict, opts: Dict[str, Any]
+        self, uri: str, post_json: JsonDict, opts: dict[str, Any]
     ) -> IResponse:
         """Make a POST request to an endpoint returning nothing
 
@@ -88,10 +88,10 @@ class HTTPClient(Generic[AgentType]):
     async def post_json_maybe_get_json(
         self,
         uri: str,
-        post_json: Dict[str, Any],
-        opts: Dict[str, Any],
-        max_size: Optional[int] = None,
-    ) -> Tuple[IResponse, Optional[JsonDict]]:
+        post_json: dict[str, Any],
+        opts: dict[str, Any],
+        max_size: int | None = None,
+    ) -> tuple[IResponse, JsonDict | None]:
         """Make a POST request to an endpoint that might be returning JSON and parse
         result
 

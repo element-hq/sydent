@@ -28,7 +28,7 @@ from matrix_is_tester.fakehs import token_for_random_user
 logger = logging.getLogger(__name__)
 
 
-class IsApi(object):
+class IsApi:
     """
     Wrappers around the IS REST API
     """

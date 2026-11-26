@@ -2,7 +2,6 @@ import json
 import logging
 import os
 from io import BytesIO
-from typing import Dict, Optional
 from unittest.mock import MagicMock
 
 import attr
@@ -52,7 +51,7 @@ tWVEpHfT+G7AjA8=
 """
 
 
-def make_sydent(test_config: Optional[dict] = None) -> Sydent:
+def make_sydent(test_config: dict | None = None) -> Sydent:
     """Create a new sydent
 
     Args:
@@ -284,7 +283,7 @@ class ResolvingMemoryReactorClock(MemoryReactorClock):
     def __init__(self):
         super().__init__()
 
-        lookups: Dict[str, str] = {}
+        lookups: dict[str, str] = {}
         self.lookups = lookups
 
         @implementer(IResolverSimple)

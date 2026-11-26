@@ -10,7 +10,7 @@
 import logging
 import os
 import sqlite3
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from sydent.sydent import Sydent
@@ -46,7 +46,7 @@ class SqliteDatabase:
             if not f.endswith(".sql"):
                 continue
             scriptPath = os.path.join(schemaDir, f)
-            fp = open(scriptPath, "r")
+            fp = open(scriptPath)
             try:
                 logger.info("Importing %s", scriptPath)
                 c.executescript(fp.read())
@@ -209,7 +209,7 @@ class SqliteDatabase:
     def _getSchemaVersion(self) -> int:
         cur = self.db.cursor()
         cur.execute("PRAGMA user_version")
-        row: Tuple[int] = cur.fetchone()
+        row: tuple[int] = cur.fetchone()
         return row[0]
 
     def _setSchemaVersion(self, ver: int) -> None:

@@ -8,7 +8,7 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import itertools
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from netaddr import AddrFormatError, IPNetwork, IPSet
 
@@ -51,9 +51,9 @@ DEFAULT_IP_RANGE_BLACKLIST = [
 
 
 def generate_ip_set(
-    ip_addresses: Optional[Iterable[str]],
-    extra_addresses: Optional[Iterable[str]] = None,
-    config_path: Optional[Iterable[str]] = None,
+    ip_addresses: Iterable[str] | None,
+    extra_addresses: Iterable[str] | None = None,
+    config_path: Iterable[str] | None = None,
 ) -> IPSet:
     """
     Generate an IPSet from a list of IP addresses or CIDRs.

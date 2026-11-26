@@ -7,7 +7,7 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING
 
 from sydent.users.accounts import Account
 
@@ -19,7 +19,7 @@ class AccountStore:
     def __init__(self, sydent: "Sydent") -> None:
         self.sydent = sydent
 
-    def getAccountByToken(self, token: str) -> Optional[Account]:
+    def getAccountByToken(self, token: str) -> Account | None:
         """
         Select the account matching the given token, if any.
 
@@ -34,14 +34,14 @@ class AccountStore:
             (token,),
         )
 
-        row: Optional[Tuple[str, int, Optional[str]]] = res.fetchone()
+        row: tuple[str, int, str | None] | None = res.fetchone()
         if row is None:
             return None
 
         return Account(*row)
 
     def storeAccount(
-        self, user_id: str, creation_ts: int, consent_version: Optional[str]
+        self, user_id: str, creation_ts: int, consent_version: str | None
     ) -> None:
         """
         Stores an account for the given user ID.
@@ -59,7 +59,7 @@ class AccountStore:
         )
         self.sydent.db.commit()
 
-    def setConsentVersion(self, user_id: str, consent_version: Optional[str]) -> None:
+    def setConsentVersion(self, user_id: str, consent_version: str | None) -> None:
         """
         Saves that the given user has agreed to all of the terms in the document of the
         given version.

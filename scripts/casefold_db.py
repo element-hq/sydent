@@ -15,7 +15,7 @@ import os
 import sqlite3
 import sys
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import attr
 import signedjson.sign
@@ -57,7 +57,7 @@ class Delta:
     """
 
     to_update: UpdateDelta
-    to_delete: Optional[List[DeleteDelta]] = None
+    to_delete: list[DeleteDelta] | None = None
 
 
 class CantSendEmailException(Exception):
@@ -153,7 +153,7 @@ def update_local_associations(
     )
 
     # a dict that associates an email address with correspoinding mxids and lookup hashes
-    associations: Dict[str, List[Tuple[str, str, str]]] = {}
+    associations: dict[str, list[tuple[str, str, str]]] = {}
 
     logger.info("Computing new hashes and signatures for local_threepid_associations")
 
@@ -171,7 +171,7 @@ def update_local_associations(
             associations[casefold_address] = [(address, mxid, lookup_hash)]
 
     # Deltas to apply to the database, associated with the casefolded address they're for.
-    deltas: Dict[str, Delta] = {}
+    deltas: dict[str, Delta] = {}
 
     # Iterate through the results, to build the deltas.
     for casefold_address, assoc_tuples in associations.items():
@@ -299,7 +299,7 @@ def update_global_associations(
 
     # dict that stores email address with mxid, email address, lookup hash, and
     # signed association
-    associations: Dict[str, List[Tuple[str, str, str, str]]] = {}
+    associations: dict[str, list[tuple[str, str, str, str]]] = {}
 
     logger.info("Computing new hashes and signatures for global_threepid_associations")
 
@@ -328,10 +328,10 @@ def update_global_associations(
             associations[casefold_address] = [(address, mxid, lookup_hash, sg_assoc)]
 
     # list of arguments to update db with
-    db_update_args: List[Tuple[Any, str, str, str, str]] = []
+    db_update_args: list[tuple[Any, str, str, str, str]] = []
 
     # list of mxids to delete
-    to_delete: List[Tuple[str]] = []
+    to_delete: list[tuple[str]] = []
 
     for casefold_address, assoc_tuples in associations.items():
         # If the row is already in the right state and there's no duplicate, don't compute

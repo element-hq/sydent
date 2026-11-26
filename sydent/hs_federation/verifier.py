@@ -8,7 +8,7 @@
 
 import logging
 import time
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, cast
 
 import attr
 import signedjson.key
@@ -59,7 +59,7 @@ class Verifier:
         self.sydent = sydent
         # Cache of server keys. These are cached until the 'valid_until_ts' time
         # in the result.
-        self.cache: Dict[str, CachedVerificationKeys] = {
+        self.cache: dict[str, CachedVerificationKeys] = {
             # server_name: <result from keys query>,
         }
 
@@ -135,8 +135,8 @@ class Verifier:
     async def verifyServerSignedJson(
         self,
         signed_json: SignedMatrixRequest,
-        acceptable_server_names: Optional[List[str]] = None,
-    ) -> Tuple[str, str]:
+        acceptable_server_names: list[str] | None = None,
+    ) -> tuple[str, str]:
         """Given a signed json object, try to verify any one
         of the signatures on it
 
@@ -199,7 +199,7 @@ class Verifier:
 
         # Retrieve an origin and signatures from the authorization header.
         origin = None
-        signatures: Dict[str, Dict[str, str]] = {}
+        signatures: dict[str, dict[str, str]] = {}
         for auth in auth_headers:
             if auth.startswith("X-Matrix"):
                 origin, key, sig = parse_auth_header(auth)
@@ -227,7 +227,7 @@ class Verifier:
         return origin
 
 
-def parse_auth_header(header_str: str) -> Tuple[str, str, str]:
+def parse_auth_header(header_str: str) -> tuple[str, str, str]:
     """
     Extracts a server name, signing key and payload signature from an
     "Authorization: X-Matrix ..." header.
@@ -243,11 +243,11 @@ def parse_auth_header(header_str: str) -> Tuple[str, str, str]:
     try:
         # Strip off "X-Matrix " and break up into key-value pairs.
         params = header_str.split(" ")[1].split(",")
-        param_dict: Dict[str, str] = dict(
+        param_dict: dict[str, str] = dict(
             # Cast safety: the split() call will either return a 1- or 2- tuple.
             # If it returns a 1-tuple, dict() will complain with a ValueError
             # so we'll spot the bad header.
-            cast(Tuple[str, str], kv.split("=", maxsplit=1))
+            cast(tuple[str, str], kv.split("=", maxsplit=1))
             for kv in params
         )
 

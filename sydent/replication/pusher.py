@@ -9,7 +9,7 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import logging
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING
 
 import twisted.internet.reactor
 import twisted.internet.task
@@ -57,7 +57,7 @@ class Pusher:
 
         localPeer.pushUpdates(signedAssocs)
 
-    def scheduledPush(self) -> "defer.Deferred[List[Tuple[bool, None]]]":
+    def scheduledPush(self) -> "defer.Deferred[list[tuple[bool, None]]]":
         """Push pending updates to all known remote peers. To be called regularly.
 
         :returns a deferred.DeferredList of defers, one per peer we're pushing to that will

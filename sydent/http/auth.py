@@ -8,7 +8,7 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from twisted.web.server import Request
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def tokenFromRequest(request: Request) -> Optional[str]:
+def tokenFromRequest(request: Request) -> str | None:
     """Extract token from header of query parameter.
 
     :param request: The request to look for an access token in.

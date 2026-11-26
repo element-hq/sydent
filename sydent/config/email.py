@@ -8,7 +8,6 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 import socket
 from configparser import ConfigParser
-from typing import Optional
 
 from sydent.config._base import BaseConfig
 from sydent.config.exceptions import ConfigError
@@ -24,7 +23,7 @@ class EmailConfig(BaseConfig):
         """
 
         # These two options are deprecated
-        self.template: Optional[str] = cfg.get("email", "email.template", fallback=None)
+        self.template: str | None = cfg.get("email", "email.template", fallback=None)
 
         self.invite_template = cfg.get("email", "email.invite_template", fallback=None)
 

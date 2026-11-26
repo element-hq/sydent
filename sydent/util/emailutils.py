@@ -15,7 +15,7 @@ import ssl
 import string
 import urllib
 from html import escape
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 import twisted.python.log
 from prometheus_client import Counter
@@ -35,7 +35,7 @@ def sendEmail(
     sydent: "Sydent",
     templateFile: str,
     mailTo: str,
-    substitutions: Dict[str, str],
+    substitutions: dict[str, str],
     log_send_errors: bool = True,
 ) -> None:
     """

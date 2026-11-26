@@ -9,7 +9,7 @@
 
 import json
 import logging
-from typing import TYPE_CHECKING, List, cast
+from typing import TYPE_CHECKING, cast
 
 import twisted.python.log
 from OpenSSL.crypto import X509
@@ -92,7 +92,7 @@ class ReplicationPushServlet(SydentResource):
             )
             raise MatrixRestError(400, "M_BAD_JSON", 'No "sgAssocs" key in JSON')
 
-        failedIds: List[int] = []
+        failedIds: list[int] = []
 
         globalAssocsStore = GlobalAssociationStore(self.sydent)
 
