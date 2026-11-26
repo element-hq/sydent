@@ -175,6 +175,9 @@ ignore = [
     # Sydent asserts invariants that the code already guarantees, so that mypy
     # can narrow types. Nothing runs Sydent with -O.
     "S101",
+    # pytest's assertion rewriting already shows the value of each operand of a
+    # combined assert.
+    "PT018",
 ]
 select = [
     # pycodestyle checks.
@@ -217,11 +220,20 @@ select = [
     "ASYNC",
     # flake8-datetimez: datetimes without a time zone.
     "DTZ",
+    # flake8-pytest-style: consistent pytest idioms.
+    "PT",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# Tests use fixed secrets and non-cryptographic randomness.
-"{tests,integration-tests}/**" = ["S105", "S311"]
+"{tests,integration-tests}/**" = [
+    # Tests use fixed secrets and non-cryptographic randomness.
+    "S105",
+    "S311",
+    # The unit tests and matrix_is_tester are unittest suites, with unittest's
+    # assertion methods.
+    "PT009",
+    "PT027",
+]
 
 [build-system]
 # uv's documentation recommends a range within the current minor release, because
