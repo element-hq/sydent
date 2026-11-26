@@ -77,7 +77,7 @@ class SslComponents:
             logger.warning("Using custom CA cert file: %s", caCertFilename)
             # Type ignore: I'm not going to add a stub for the semiprivate
             # _sslverify module. I've already taken on too much stubbing as it is!
-            return twisted.internet._sslverify.OpenSSLCertificateAuthorities(  # type: ignore
+            return twisted.internet._sslverify.OpenSSLCertificateAuthorities(  # type: ignore[no-untyped-call]
                 [caCert.original]
             )
         else:
