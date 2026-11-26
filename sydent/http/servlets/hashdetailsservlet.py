@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 class HashDetailsServlet(SydentResource):
     isLeaf = True
-    known_algorithms = ["sha256", "none"]
+    known_algorithms = ("sha256", "none")
 
     def __init__(self, syd: "Sydent", lookup_pepper: str) -> None:
         super().__init__()

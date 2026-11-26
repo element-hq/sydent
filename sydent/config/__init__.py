@@ -11,7 +11,6 @@ import copy
 import logging.handlers
 import os
 from configparser import DEFAULTSECT, ConfigParser
-from typing import Dict
 
 from sydent.config.crypto import CryptoConfig
 from sydent.config.database import DatabaseConfig
@@ -237,11 +236,10 @@ class SydentConfig:
         needs_saving = self.parse_from_config_parser(cfg)
 
         if needs_saving:
-            fp = open(config_file, "w")
-            cfg.write(fp)
-            fp.close()
+            with open(config_file, "w") as fp:
+                cfg.write(fp)
 
-    def parse_config_dict(self, config_dict: Dict[str, Dict[str, str]]) -> None:
+    def parse_config_dict(self, config_dict: dict[str, dict[str, str]]) -> None:
         """
         Parse the given config from a dictionary, populating missing items and sections
 
@@ -252,7 +250,7 @@ class SydentConfig:
         for section, section_dict in config_dict.items():
             if section not in config:
                 config[section] = {}
-            for option in section_dict.keys():
+            for option in section_dict:
                 config[section][option] = config_dict[section][option]
 
         # Build a ConfigParser from the merged dictionary

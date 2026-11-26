@@ -31,7 +31,7 @@ class RegisterTestCase(unittest.TestCase):
 
         bad_hostname = "example.com#"
 
-        request, channel = make_request(
+        _request, channel = make_request(
             self.sydent.reactor,
             self.sydent.clientApiHttpServer.factory,
             "POST",
@@ -56,7 +56,7 @@ class RegisterTestCase(unittest.TestCase):
         with patch(
             "sydent.http.httpclient.FederationHttpClient.get_json", side_effect=exc
         ):
-            request, channel = make_request(
+            _request, channel = make_request(
                 self.sydent.reactor,
                 self.sydent.clientApiHttpServer.factory,
                 "POST",
@@ -78,7 +78,7 @@ class RegisterTestCase(unittest.TestCase):
         with patch(
             "sydent.http.httpclient.FederationHttpClient.get_json", side_effect=exc
         ):
-            request, channel = make_request(
+            _request, channel = make_request(
                 self.sydent.reactor,
                 self.sydent.clientApiHttpServer.factory,
                 "POST",
@@ -111,7 +111,7 @@ class RegisterAllowListTestCase(unittest.TestCase):
         self.sydent = make_sydent(test_config=config)
         self.sydent.run()
 
-        request, channel = make_request(
+        _request, channel = make_request(
             self.sydent.reactor,
             self.sydent.clientApiHttpServer.factory,
             "POST",

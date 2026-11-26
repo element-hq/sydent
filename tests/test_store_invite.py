@@ -40,7 +40,7 @@ class StoreInviteTestCase(unittest.TestCase):
         with patch("sydent.http.servlets.store_invite_servlet.authV2") as authV2:
             authV2.return_value = Account(self.sender, 0, None)
 
-            request, channel = make_request(
+            _request, channel = make_request(
                 self.sydent.reactor,
                 self.sydent.clientApiHttpServer.factory,
                 "POST",

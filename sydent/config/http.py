@@ -8,7 +8,6 @@
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
 from configparser import ConfigParser
-from typing import Optional
 
 from sydent.config._base import BaseConfig
 
@@ -33,7 +32,7 @@ class HTTPConfig(BaseConfig):
         self.internal_bind_address = cfg.get(
             "http", "internalapi.http.bind_address", fallback="::1"
         )
-        self.internal_port: Optional[int] = None
+        self.internal_port: int | None = None
         if internal_api_port != "":
             self.internal_port = int(internal_api_port)
 

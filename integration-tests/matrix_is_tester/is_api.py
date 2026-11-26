@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-
-# -*- coding: utf-8 -*-
-
 # Copyright 2019 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,8 +23,11 @@ from matrix_is_tester.fakehs import token_for_random_user
 
 logger = logging.getLogger(__name__)
 
+# Sydent runs on the same machine, so a request that takes longer than this has hung.
+TIMEOUT_SECONDS = 30
 
-class IsApi(object):
+
+class IsApi:
     """
     Wrappers around the IS REST API
     """
@@ -86,7 +85,7 @@ class IsApi(object):
         return matches.group(1)
 
     def ping(self):
-        resp = requests.get(self.apiRoot)
+        resp = requests.get(self.apiRoot, timeout=TIMEOUT_SECONDS)
         return resp.json()
 
     def request_email_code(self, address, client_secret, send_attempt):
@@ -98,6 +97,7 @@ class IsApi(object):
                 "send_attempt": send_attempt,
             },
             headers=self.headers,
+            timeout=TIMEOUT_SECONDS,
         )
         return resp.json()
 
@@ -106,6 +106,7 @@ class IsApi(object):
             self.apiRoot + "/validate/email/submitToken",
             params={"client_secret": client_secret, "sid": sid, "token": token},
             headers=self.headers,
+            timeout=TIMEOUT_SECONDS,
         )
         return resp.content
 
@@ -120,6 +121,7 @@ class IsApi(object):
             self.apiRoot + "/validate/email/submitToken",
             json={"client_secret": client_secret, "sid": sid, "token": token},
             headers=self.headers,
+            timeout=TIMEOUT_SECONDS,
         )
         body = resp.json()
         logger.info("submitToken returned %r", body)
@@ -132,6 +134,7 @@ class IsApi(object):
             self.apiRoot + "/3pid/bind",
             json={"client_secret": client_secret, "sid": sid, "mxid": mxid},
             headers=self.headers,
+            timeout=TIMEOUT_SECONDS,
         )
         return resp.json()
 
@@ -140,6 +143,7 @@ class IsApi(object):
             self.apiRoot + "/lookup",
             params={"medium": medium, "address": address},
             headers=self.headers,
+            timeout=TIMEOUT_SECONDS,
         )
         return resp.json()
 
@@ -148,6 +152,7 @@ class IsApi(object):
             self.apiRoot + "/bulk_lookup",
             json={"threepids": threepids},
             headers=self.headers,
+            timeout=TIMEOUT_SECONDS,
         )
         return resp.json()
 
@@ -156,21 +161,25 @@ class IsApi(object):
             self.apiRoot + "/3pid/getValidated3pid",
             params={"sid": sid, "client_secret": client_secret},
             headers=self.headers,
+            timeout=TIMEOUT_SECONDS,
         )
         return resp.json()
 
     def store_invite(self, params):
         resp = requests.post(
-            self.apiRoot + "/store-invite", json=params, headers=self.headers
+            self.apiRoot + "/store-invite",
+            json=params,
+            headers=self.headers,
+            timeout=TIMEOUT_SECONDS,
         )
         return resp.json()
 
     def pubkey_is_valid(self, url, pubkey):
-        resp = requests.get(url, params={"public_key": pubkey})
+        resp = requests.get(url, params={"public_key": pubkey}, timeout=TIMEOUT_SECONDS)
         return resp.json()
 
     def get_terms(self):
-        resp = requests.get(self.apiRoot + "/terms")
+        resp = requests.get(self.apiRoot + "/terms", timeout=TIMEOUT_SECONDS)
         return resp.json()
 
     def agree_to_terms(self, user_accepts):
@@ -178,11 +187,14 @@ class IsApi(object):
             self.apiRoot + "/terms",
             json={"user_accepts": user_accepts},
             headers=self.headers,
+            timeout=TIMEOUT_SECONDS,
         )
         return resp.json()
 
     def get_versions(self):
-        resp = requests.get(self.base_url + "/_matrix/identity/versions")
+        resp = requests.get(
+            self.base_url + "/_matrix/identity/versions", timeout=TIMEOUT_SECONDS
+        )
         return resp.json()
 
     def register(self, matrix_server_name, access_token):
@@ -192,19 +204,30 @@ class IsApi(object):
                 "matrix_server_name": matrix_server_name,
                 "access_token": access_token,
             },
+            timeout=TIMEOUT_SECONDS,
         )
         return resp.json()
 
     def account(self):
-        resp = requests.get(self.apiRoot + "/account", headers=self.headers)
+        resp = requests.get(
+            self.apiRoot + "/account", headers=self.headers, timeout=TIMEOUT_SECONDS
+        )
         return resp.json()
 
     def logout(self):
-        resp = requests.post(self.apiRoot + "/account/logout", headers=self.headers)
+        resp = requests.post(
+            self.apiRoot + "/account/logout",
+            headers=self.headers,
+            timeout=TIMEOUT_SECONDS,
+        )
         return resp.json()
 
     def hash_details(self):
-        resp = requests.get(self.apiRoot + "/hash_details", headers=self.headers)
+        resp = requests.get(
+            self.apiRoot + "/hash_details",
+            headers=self.headers,
+            timeout=TIMEOUT_SECONDS,
+        )
         return resp.json()
 
     def hashed_lookup(self, addresses, alg, pepper):
@@ -212,6 +235,7 @@ class IsApi(object):
             self.apiRoot + "/lookup",
             json={"addresses": addresses, "algorithm": alg, "pepper": pepper},
             headers=self.headers,
+            timeout=TIMEOUT_SECONDS,
         )
         return resp.json()
 

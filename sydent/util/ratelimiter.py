@@ -9,7 +9,7 @@
 
 import logging
 from http import HTTPStatus
-from typing import Dict, Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from twisted.internet import task
 from twisted.internet.interfaces import IReactorTime
@@ -22,7 +22,7 @@ K = TypeVar("K")
 
 
 class LimitExceededException(MatrixRestError):
-    def __init__(self, error: Optional[str] = None) -> None:
+    def __init__(self, error: str | None = None) -> None:
         if error is None:
             error = "Too many requests"
 
@@ -49,7 +49,7 @@ class Ratelimiter(Generic[K]):
         # the number of tokens is greater than `burst`.
         #
         # Entries are removed when token count hits zero.
-        self._buckets: Dict[K, int] = {}
+        self._buckets: dict[K, int] = {}
 
         # We remove tokens from all buckets at `rate_hz` hertz.
         call = task.LoopingCall(self._periodic_call)
@@ -63,7 +63,7 @@ class Ratelimiter(Generic[K]):
             key: tokens - 1 for key, tokens in self._buckets.items() if tokens > 1
         }
 
-    def ratelimit(self, key: K, error: Optional[str] = None) -> None:
+    def ratelimit(self, key: K, error: str | None = None) -> None:
         """Check if we should ratelimit the request with the given key.
 
         Raises:

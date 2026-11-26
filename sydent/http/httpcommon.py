@@ -9,7 +9,7 @@
 
 import logging
 from io import BytesIO
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, cast
 
 import twisted.internet.ssl
 from twisted.internet import defer, protocol
@@ -39,7 +39,7 @@ class SslComponents:
         self.myPrivateCertificate = self.makeMyCertificate()
         self.trustRoot = self.makeTrustRoot()
 
-    def makeMyCertificate(self) -> Optional[twisted.internet.ssl.PrivateCertificate]:
+    def makeMyCertificate(self) -> twisted.internet.ssl.PrivateCertificate | None:
         # TODO Move some of this loading into parse_config
         privKeyAndCertFilename = self.sydent.config.http.cert_file
 
@@ -51,7 +51,8 @@ class SslComponents:
             return None
 
         try:
-            fp = open(privKeyAndCertFilename)
+            with open(privKeyAndCertFilename) as fp:
+                authData = fp.read()
         except OSError:
             logger.warning(
                 "Unable to read private key / cert file from %s: not starting the replication HTTPS server "
@@ -60,8 +61,6 @@ class SslComponents:
             )
             return None
 
-        authData = fp.read()
-        fp.close()
         return twisted.internet.ssl.PrivateCertificate.loadPEM(authData)
 
     def makeTrustRoot(self) -> IOpenSSLTrustRoot:
@@ -70,16 +69,15 @@ class SslComponents:
         caCertFilename = self.sydent.config.http.ca_cert_file
         if len(caCertFilename) > 0:
             try:
-                fp = open(caCertFilename)
-                caCert = twisted.internet.ssl.Certificate.loadPEM(fp.read())
-                fp.close()
+                with open(caCertFilename) as fp:
+                    caCert = twisted.internet.ssl.Certificate.loadPEM(fp.read())
             except Exception:
                 logger.warning("Failed to open CA cert file %s", caCertFilename)
                 raise
             logger.warning("Using custom CA cert file: %s", caCertFilename)
             # Type ignore: I'm not going to add a stub for the semiprivate
             # _sslverify module. I've already taken on too much stubbing as it is!
-            return twisted.internet._sslverify.OpenSSLCertificateAuthorities(  # type: ignore
+            return twisted.internet._sslverify.OpenSSLCertificateAuthorities(  # type: ignore[no-untyped-call]
                 [caCert.original]
             )
         else:
@@ -120,9 +118,7 @@ class _ReadBodyWithMaxSizeProtocol(protocol.Protocol):
 
     transport: ITCPTransport
 
-    def __init__(
-        self, deferred: "defer.Deferred[bytes]", max_size: Optional[int]
-    ) -> None:
+    def __init__(self, deferred: "defer.Deferred[bytes]", max_size: int | None) -> None:
         self.stream = BytesIO()
         self.deferred = deferred
         self.length = 0
@@ -161,7 +157,7 @@ class _ReadBodyWithMaxSizeProtocol(protocol.Protocol):
 
 
 def read_body_with_max_size(
-    response: IResponse, max_size: Optional[int]
+    response: IResponse, max_size: int | None
 ) -> "defer.Deferred[bytes]":
     """
     Read a HTTP response body to a file-object. Optionally enforcing a maximum file size.
@@ -176,7 +172,7 @@ def read_body_with_max_size(
     Returns:
         A Deferred which resolves to the read body.
     """
-    d: "defer.Deferred[bytes]" = defer.Deferred()
+    d: defer.Deferred[bytes] = defer.Deferred()
 
     # If the Content-Length header gives a size larger than the maximum allowed
     # size, do not bother downloading the body.

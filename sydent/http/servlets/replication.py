@@ -9,7 +9,7 @@
 
 import json
 import logging
-from typing import TYPE_CHECKING, List, cast
+from typing import TYPE_CHECKING, cast
 
 import twisted.python.log
 from OpenSSL.crypto import X509
@@ -79,11 +79,11 @@ class ReplicationPushServlet(SydentResource):
         try:
             # json.loads doesn't allow bytes in Python 3.5
             inJson = json_decoder.decode(request.content.read().decode("UTF-8"))
-        except ValueError:
+        except ValueError as e:
             logger.warning(
                 "Peer %s made push connection with malformed JSON", peer.servername
             )
-            raise MatrixRestError(400, "M_BAD_JSON", "Malformed JSON")
+            raise MatrixRestError(400, "M_BAD_JSON", "Malformed JSON") from e
 
         if "sgAssocs" not in inJson:
             logger.warning(
@@ -92,7 +92,7 @@ class ReplicationPushServlet(SydentResource):
             )
             raise MatrixRestError(400, "M_BAD_JSON", 'No "sgAssocs" key in JSON')
 
-        failedIds: List[int] = []
+        failedIds: list[int] = []
 
         globalAssocsStore = GlobalAssociationStore(self.sydent)
 

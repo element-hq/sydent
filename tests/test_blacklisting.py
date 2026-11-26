@@ -79,9 +79,9 @@ class BlacklistingAgentTest(TestCase):
 
             # Grab the latest TCP connection.
             (
-                host,
-                port,
-                client_factory,
+                _host,
+                _port,
+                _client_factory,
                 _timeout,
                 _bindAddress,
             ) = self.reactor.tcpClients.pop()
@@ -102,7 +102,7 @@ class BlacklistingAgentTest(TestCase):
             )
         ]
 
-        request, channel = make_request(
+        _request, channel = make_request(
             self.sydent.reactor,
             self.sydent.clientApiHttpServer.factory,
             "POST",
@@ -153,7 +153,7 @@ class BlacklistingAgentTest(TestCase):
             )
         ]
 
-        request, channel = make_request(
+        _request, channel = make_request(
             self.sydent.reactor,
             self.sydent.clientApiHttpServer.factory,
             "POST",
@@ -200,7 +200,7 @@ class BlacklistingAgentTest(TestCase):
             )
         ]
 
-        request, channel = make_request(
+        _request, channel = make_request(
             self.sydent.reactor,
             self.sydent.clientApiHttpServer.factory,
             "POST",

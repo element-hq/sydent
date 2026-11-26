@@ -15,7 +15,7 @@ import os
 import sqlite3
 import sys
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import attr
 import signedjson.sign
@@ -57,15 +57,13 @@ class Delta:
     """
 
     to_update: UpdateDelta
-    to_delete: Optional[List[DeleteDelta]] = None
+    to_delete: list[DeleteDelta] | None = None
 
 
 class CantSendEmailException(Exception):
     """Raised when we didn't succeed to send an email after MAX_ATTEMPTS_FOR_EMAIL
     attempts.
     """
-
-    pass
 
 
 def calculate_lookup_hash(sydent: Sydent, address: str) -> str:
@@ -111,13 +109,15 @@ def sendEmailWithBackoff(
                 {"mxid": mxid},
                 log_send_errors=False,
             )
-            logger.info("Sent email to %s" % address)
+            logger.info("Sent email to %s", address)
 
             return
         except EmailSendException:
             logger.info(
-                "Failed to send email to %s (attempt %d/%d)"
-                % (address, i + 1, MAX_ATTEMPTS_FOR_EMAIL)
+                "Failed to send email to %s (attempt %d/%d)",
+                address,
+                i + 1,
+                MAX_ATTEMPTS_FOR_EMAIL,
             )
 
             time.sleep(backoff)
@@ -153,7 +153,7 @@ def update_local_associations(
     )
 
     # a dict that associates an email address with correspoinding mxids and lookup hashes
-    associations: Dict[str, List[Tuple[str, str, str]]] = {}
+    associations: dict[str, list[tuple[str, str, str]]] = {}
 
     logger.info("Computing new hashes and signatures for local_threepid_associations")
 
@@ -171,7 +171,7 @@ def update_local_associations(
             associations[casefold_address] = [(address, mxid, lookup_hash)]
 
     # Deltas to apply to the database, associated with the casefolded address they're for.
-    deltas: Dict[str, Delta] = {}
+    deltas: dict[str, Delta] = {}
 
     # Iterate through the results, to build the deltas.
     for casefold_address, assoc_tuples in associations.items():
@@ -200,7 +200,7 @@ def update_local_associations(
                     )
                 )
 
-    logger.info(f"{len(deltas)} rows to update in local_threepid_associations")
+    logger.info("%d rows to update in local_threepid_associations", len(deltas))
 
     # Apply the deltas
     for casefolded_address, delta in deltas.items():
@@ -266,7 +266,7 @@ def update_local_associations(
             # to avoid deleting rows we can't warn users about, and we don't want to
             # proceed with the subsequent update because there might still be duplicates
             # in the database (since we haven't deleted everything we wanted to delete).
-            logger.warn("Failed to send email to %s; skipping!", to_delete.address)
+            logger.warning("Failed to send email to %s; skipping!", to_delete.address)
             continue
 
 
@@ -299,7 +299,7 @@ def update_global_associations(
 
     # dict that stores email address with mxid, email address, lookup hash, and
     # signed association
-    associations: Dict[str, List[Tuple[str, str, str, str]]] = {}
+    associations: dict[str, list[tuple[str, str, str, str]]] = {}
 
     logger.info("Computing new hashes and signatures for global_threepid_associations")
 
@@ -328,10 +328,10 @@ def update_global_associations(
             associations[casefold_address] = [(address, mxid, lookup_hash, sg_assoc)]
 
     # list of arguments to update db with
-    db_update_args: List[Tuple[Any, str, str, str, str]] = []
+    db_update_args: list[tuple[Any, str, str, str, str]] = []
 
     # list of mxids to delete
-    to_delete: List[Tuple[str]] = []
+    to_delete: list[tuple[str]] = []
 
     for casefold_address, assoc_tuples in associations.items():
         # If the row is already in the right state and there's no duplicate, don't compute
@@ -352,11 +352,13 @@ def update_global_associations(
         if len(assoc_tuples) > 1:
             # Iterate over all associations except for the first one, since we've already
             # processed it.
-            for address, mxid, _, _ in assoc_tuples[1:]:
+            for address, _, _, _ in assoc_tuples[1:]:
                 to_delete.append((address,))
 
     logger.info(
-        f"{len(to_delete)} rows to delete, {len(db_update_args)} rows to update in global_threepid_associations"
+        "%d rows to delete, %d rows to update in global_threepid_associations",
+        len(to_delete),
+        len(db_update_args),
     )
     if not dry_run:
         cur = db.cursor()
@@ -368,7 +370,7 @@ def update_global_associations(
             )
 
             logger.info(
-                f"{len(to_delete)} rows deleted from global_threepid_associations"
+                "%d rows deleted from global_threepid_associations", len(to_delete)
             )
 
         if len(db_update_args) > 0:
@@ -378,7 +380,8 @@ def update_global_associations(
             )
 
             logger.info(
-                f"{len(db_update_args)} rows updated in global_threepid_associations"
+                "%d rows updated in global_threepid_associations",
+                len(db_update_args),
             )
 
         db.commit()
@@ -409,7 +412,7 @@ if __name__ == "__main__":
 
     # if the path the user gives us doesn't work, find it for them
     if not os.path.exists(args.config_path):
-        logger.error(f"The config file '{args.config_path}' does not exist.")
+        logger.error("The config file '%s' does not exist.", args.config_path)
         sys.exit(1)
 
     sydent_config = SydentConfig()

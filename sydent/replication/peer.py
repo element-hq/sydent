@@ -11,7 +11,8 @@ import binascii
 import json
 import logging
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Dict, Generic, Optional, Sequence, TypeVar
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 import signedjson.key
 import signedjson.sign
@@ -42,7 +43,7 @@ SIGNING_KEY_ALGORITHM = "ed25519"
 
 
 class Peer(Generic[PushUpdateReturn]):
-    def __init__(self, servername: str, pubkeys: Dict[str, str]):
+    def __init__(self, servername: str, pubkeys: dict[str, str]):
         """
         :param server_name: The peer's server name.
         :param pubkeys: The peer's public keys in a Dict[key_id, key_b64]
@@ -128,9 +129,9 @@ class RemotePeer(Peer[IResponse]):
         self,
         sydent: "Sydent",
         server_name: str,
-        port: Optional[int],
-        pubkeys: Dict[str, str],
-        lastSentVersion: Optional[int],
+        port: int | None,
+        pubkeys: dict[str, str],
+        lastSentVersion: int | None,
     ) -> None:
         """
         :param sydent: The current Sydent instance.
@@ -181,7 +182,7 @@ class RemotePeer(Peer[IResponse]):
             except Exception as e:
                 raise ConfigError(
                     "Unable to decode public key for peer %s: %s" % (server_name, e),
-                )
+                ) from e
 
         self.verify_key = signedjson.key.decode_verify_key_bytes(
             SIGNING_KEY_ALGORITHM + ":", pubkey_decoded
@@ -236,7 +237,7 @@ class RemotePeer(Peer[IResponse]):
         # (ie. remove the record we kept in order to propagate the deletion to
         # other peers).
 
-        updateDeferred: "Deferred[IResponse]" = defer.Deferred()
+        updateDeferred: Deferred[IResponse] = defer.Deferred()
 
         reqDeferred.addCallback(self._pushSuccess, updateDeferred=updateDeferred)
         reqDeferred.addErrback(self._pushFailed, updateDeferred=updateDeferred)

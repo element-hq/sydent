@@ -7,7 +7,7 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING
 
 from sydent.replication.peer import RemotePeer
 
@@ -19,7 +19,7 @@ class PeerStore:
     def __init__(self, sydent: "Sydent") -> None:
         self.sydent = sydent
 
-    def getPeerByName(self, name: str) -> Optional[RemotePeer]:
+    def getPeerByName(self, name: str) -> RemotePeer | None:
         """
         Retrieves a remote peer using it's server name.
 
@@ -39,11 +39,11 @@ class PeerStore:
         # at least one row and assign serverName a string value, because the
         # `name` column is declared `not null` in the DB.
         serverName: str = None  # type: ignore[assignment]
-        port: Optional[int] = None
-        lastSentVer: Optional[int] = None
-        pubkeys: Dict[str, str] = {}
+        port: int | None = None
+        lastSentVer: int | None = None
+        pubkeys: dict[str, str] = {}
 
-        row: Tuple[str, Optional[int], Optional[int], str, str]
+        row: tuple[str, int | None, int | None, str, str]
         for row in res.fetchall():
             serverName = row[0]
             port = row[1]
@@ -57,7 +57,7 @@ class PeerStore:
 
         return p
 
-    def getAllPeers(self) -> List[RemotePeer]:
+    def getAllPeers(self) -> list[RemotePeer]:
         """
         Retrieve all of the remote peers from the database.
 
@@ -85,9 +85,9 @@ class PeerStore:
         peername: str = None  # type: ignore[assignment]
         port = None
         lastSentVer = None
-        pubkeys: Dict[str, str] = {}
+        pubkeys: dict[str, str] = {}
 
-        row: Tuple[str, Optional[int], Optional[int], str, str]
+        row: tuple[str, int | None, int | None, str, str]
         for row in res.fetchall():
             if row[0] != peername:
                 if len(pubkeys) > 0:
@@ -108,8 +108,8 @@ class PeerStore:
     def setLastSentVersionAndPokeSucceeded(
         self,
         peerName: str,
-        lastSentVersion: Optional[int],
-        lastPokeSucceeded: Optional[int],
+        lastSentVersion: int | None,
+        lastPokeSucceeded: int | None,
     ) -> None:
         """
         Sets the ID of the last association sent to a given peer and the time of the

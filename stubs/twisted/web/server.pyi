@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from twisted.web import http
 from twisted.web.resource import IResource
@@ -14,7 +14,7 @@ class Site(http.HTTPFactory):
     def __init__(
         self,
         resource: IResource,
-        requestFactory: Optional[RequestFactory] = ...,
+        requestFactory: RequestFactory | None = ...,
         # Args and kwargs get passed to http.HTTPFactory. But we don't use them.
         *args: object,
         **kwargs: object,

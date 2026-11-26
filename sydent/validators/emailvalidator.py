@@ -9,7 +9,7 @@
 
 import logging
 import urllib
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING
 
 from sydent.db.valsession import ThreePidValSessionStore
 from sydent.util import time_msec
@@ -31,9 +31,9 @@ class EmailValidator:
         emailAddress: str,
         clientSecret: str,
         sendAttempt: int,
-        nextLink: Optional[str],
-        ipaddress: Optional[str] = None,
-        brand: Optional[str] = None,
+        nextLink: str | None,
+        ipaddress: str | None = None,
+        brand: str | None = None,
     ) -> int:
         """
         Creates or retrieves a validation session and sends an email to the corresponding
@@ -100,7 +100,7 @@ class EmailValidator:
         session_id: int,
         token: str,
         clientSecret: str,
-        nextLink: Optional[str],
+        nextLink: str | None,
     ) -> str:
         """
         Creates a validation link that can be sent via email to the user.
@@ -138,7 +138,7 @@ class EmailValidator:
 
     def validateSessionWithToken(
         self, sid: int, clientSecret: str, token: str
-    ) -> Dict[str, bool]:
+    ) -> dict[str, bool]:
         """
         Validates the session with the given ID.
 

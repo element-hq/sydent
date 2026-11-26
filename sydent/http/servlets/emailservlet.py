@@ -7,7 +7,7 @@
 # Originally licensed under the Apache License, Version 2.0:
 # <http://www.apache.org/licenses/LICENSE-2.0>.
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from twisted.web.server import Request
 
@@ -89,7 +89,7 @@ class EmailRequestCodeServlet(SydentResource):
 
         brand = self.sydent.brand_from_request(request)
 
-        nextLink: Optional[str] = None
+        nextLink: str | None = None
         if "next_link" in args and not args["next_link"].startswith("file:///"):
             nextLink = args["next_link"]
 
@@ -131,7 +131,8 @@ class EmailValidateCodeServlet(SydentResource):
         resp = None
         try:
             resp = self.do_validate_request(request)
-        except Exception:
+        except Exception:  # noqa: S110
+            # Any failure shows the failure page.
             pass
         if resp and "success" in resp and resp["success"]:
             msg = "Verification successful! Please return to your Matrix client to continue."
@@ -155,7 +156,8 @@ class EmailValidateCodeServlet(SydentResource):
             templateFile = self.sydent.config.http.verify_response_template
 
         request.setHeader("Content-Type", "text/html")
-        res = open(templateFile).read() % {"message": msg}
+        with open(templateFile) as template:
+            res = template.read() % {"message": msg}
 
         return res.encode("UTF-8")
 

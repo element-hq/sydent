@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-
-# -*- coding: utf-8 -*-
-
 # Copyright 2019 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +22,7 @@ from matrix_is_tester.mailsink import get_shared_mailsink
 logger = logging.getLogger(__name__)
 
 
-class BaseApiTest(object):
+class BaseApiTest:
     """
     Not a test case itself, but can be subclassed to test APIs common
     between versions.

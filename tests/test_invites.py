@@ -111,7 +111,7 @@ class ThreepidInvitesTestCase(unittest.TestCase):
             "sender": "@foo:example.com",
             "room_name": "This is an EVIL room name.",
         }
-        request, channel = make_request(
+        _request, channel = make_request(
             self.sydent.reactor,
             self.sydent.clientApiHttpServer.factory,
             "POST",
@@ -134,7 +134,7 @@ class ThreepidInvitesTestCase(unittest.TestCase):
 
         # don't actually send the email
         with patch("sydent.util.emailutils.smtplib") as smtplib:
-            request, channel = make_request(
+            _request, channel = make_request(
                 self.sydent.reactor,
                 self.sydent.clientApiHttpServer.factory,
                 "POST",

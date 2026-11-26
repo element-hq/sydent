@@ -1,4 +1,4 @@
-from typing import ClassVar, Generic, Optional, TypeVar
+from typing import ClassVar, Generic, TypeVar
 
 class Name:
     name: bytes
@@ -21,5 +21,5 @@ class RRHeader(Generic[_Payload]):
     type: int
     cls: int
     ttl: int
-    payload: Optional[_Payload]
+    payload: _Payload | None
     auth: bool

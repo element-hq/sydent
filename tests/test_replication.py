@@ -78,7 +78,7 @@ class ReplicationTestCase(unittest.TestCase):
 
         # Send the replication push.
         body = {"sgAssocs": signed_assocs}
-        request, channel = make_request(
+        _request, channel = make_request(
             self.sydent.reactor,
             self.sydent.replicationHttpsServer.factory,
             "POST",
