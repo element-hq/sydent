@@ -15,13 +15,13 @@ import os
 import sqlite3
 import sys
 import time
-from typing import Any
+from typing import Any, cast
 
 import attr
 import signedjson.sign
 
 from sydent.config import SydentConfig
-from sydent.sydent import Sydent
+from sydent.sydent import Sydent, SydentReactor
 from sydent.util import json_decoder
 from sydent.util.emailutils import EmailSendException, sendEmail
 from sydent.util.hash import sha256_and_url_safe_base64
@@ -191,14 +191,10 @@ def update_local_associations(
         if len(assoc_tuples) > 1:
             # Iterate over all associations except for the first one, since we've already
             # processed it.
-            deltas[casefold_address].to_delete = []
-            for address, mxid, _ in assoc_tuples[1:]:
-                deltas[casefold_address].to_delete.append(
-                    DeleteDelta(
-                        address=address,
-                        mxid=mxid,
-                    )
-                )
+            deltas[casefold_address].to_delete = [
+                DeleteDelta(address=address, mxid=mxid)
+                for address, mxid, _ in assoc_tuples[1:]
+            ]
 
     logger.info("%d rows to update in local_threepid_associations", len(deltas))
 
@@ -419,7 +415,9 @@ if __name__ == "__main__":
     sydent_config.parse_config_file(args.config_path)
 
     reactor = ResolvingMemoryReactorClock()
-    sydent = Sydent(sydent_config, reactor, False)
+    # The memory reactor provides each interface that SydentReactor combines,
+    # but does not declare SydentReactor itself.
+    sydent = Sydent(sydent_config, cast(SydentReactor, reactor), False)
 
     update_global_associations(sydent, sydent.db, dry_run=args.dry_run)
     update_local_associations(

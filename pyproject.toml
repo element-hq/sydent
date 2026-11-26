@@ -154,17 +154,17 @@ enable_error_code = [
     "unimported-reveal",
 ]
 
-files = [
-    # Find files that pass with
-    #     find sydent tests -type d -not -name __pycache__ -exec bash -c "mypy --strict '{}' > /dev/null"  \; -print
-    "sydent"
-    # TODO the rest of CI checks these---mypy ought to too.
-    # "tests",
-    # "matrix_is_test",
-    # "scripts",
-    # "setup.py",
-]
+files = ["sydent", "scripts", "scripts/generate-key"]
 mypy_path = "stubs"
+# scripts/ has no __init__.py. This names scripts/casefold_db.py
+# scripts.casefold_db, the module that the tests import.
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+# The except clause in update_local_associations only catches an exception
+# raised inside the loop that binds `to_delete`.
+module = "scripts.casefold_db"
+disable_error_code = ["possibly-undefined"]
 
 [tool.pytest]
 # The integration suite binds fixed ports, so a bare `pytest` leaves it out.
