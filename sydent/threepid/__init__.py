@@ -46,4 +46,5 @@ class ThreepidAssociation:
     ts: int | None
     not_before: int | None
     not_after: int | None
-    extra_fields: dict[str, Any] = {}
+    # Every instance built without extra_fields shares this one dict.
+    extra_fields: dict[str, Any] = {}  # noqa: RUF008
